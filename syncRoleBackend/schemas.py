@@ -15,6 +15,10 @@ class JobPostingCreate(BaseModel):
     status: str = "saved"
     location: str = ""
     salary: str = ""
+    description: str = ""
+    recruiter_name: str = ""
+    published_at: str = ""
+    employment_type: str = ""
 
     def model_dump_db(self) -> dict:
         raw = self.model_dump()
@@ -30,6 +34,10 @@ class JobPostingUpdate(BaseModel):
     status: Optional[str] = None
     location: Optional[str] = None
     salary: Optional[str] = None
+    description: Optional[str] = None
+    recruiter_name: Optional[str] = None
+    published_at: Optional[str] = None
+    employment_type: Optional[str] = None
 
 
 class JobPostingResponse(BaseModel):
@@ -41,6 +49,10 @@ class JobPostingResponse(BaseModel):
     createdAt: str
     location: str
     salary: str
+    description: str
+    recruiterName: str
+    publishedAt: str
+    employmentType: str
 
     @classmethod
     def from_db_row(cls, row: dict) -> "JobPostingResponse":
@@ -57,7 +69,28 @@ class JobPostingResponse(BaseModel):
             ),
             location=row.get("location", ""),
             salary=row.get("salary", ""),
+            description=row.get("description", ""),
+            recruiterName=row.get("recruiter_name", ""),
+            publishedAt=row.get("published_at", ""),
+            employmentType=row.get("employment_type", ""),
         )
+
+
+class ScrapeRequest(BaseModel):
+    url: str
+    page_content: str
+
+
+class ScrapeResponse(BaseModel):
+    title: str
+    company: str
+    source_url: str
+    location: str
+    salary: str
+    description: str
+    recruiter_name: str
+    published_at: str
+    employment_type: str
 
 
 def _new_id() -> str:

@@ -25,6 +25,10 @@ def test_create_job():
         "status": "applied",
         "location": "Remote",
         "salary": "$100k",
+        "description": "A great job",
+        "recruiterName": "Jane",
+        "publishedAt": "hace 2 días",
+        "employmentType": "Remoto",
     }
     resp = client.post("/api/v1/jobs", json=payload)
     assert resp.status_code == 200
@@ -32,11 +36,15 @@ def test_create_job():
     assert data["title"] == "Test Engineer"
     assert data["company"] == "TestCorp"
     assert data["status"] == "applied"
+    assert data["description"] == "A great job"
+    assert data["recruiterName"] == "Jane"
+    assert data["publishedAt"] == "hace 2 días"
+    assert data["employmentType"] == "Remoto"
     assert "id" in data
     assert "createdAt" in data
 
 
-def test_create_job_defaults_status():
+def test_create_job_defaults():
     payload = {
         "title": "Minimal Job",
         "company": "MinCorp",
@@ -44,7 +52,12 @@ def test_create_job_defaults_status():
     }
     resp = client.post("/api/v1/jobs", json=payload)
     assert resp.status_code == 200
-    assert resp.json()["status"] == "saved"
+    data = resp.json()
+    assert data["status"] == "saved"
+    assert data["description"] == ""
+    assert data["recruiterName"] == ""
+    assert data["publishedAt"] == ""
+    assert data["employmentType"] == ""
 
 
 def test_update_job():
@@ -93,3 +106,16 @@ def test_update_nonexistent_job():
         json={"status": "offer"},
     )
     assert resp.status_code == 404
+
+
+def test_scrape_no_openai_key():
+    """Without OPENAI_API_KEY set, scrape should return 501."""
+    resp = client.post(
+        "/api/v1/scrape",
+        json={
+            "url": "https://example.com/job",
+            "page_content": "Some job page content",
+        },
+    )
+    assert resp.status_code == 501
+    assert "OpenAI not configured" in resp.json()["detail"]

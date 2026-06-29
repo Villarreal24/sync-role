@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import type { JobPosting, JobStatus } from '../types'
-import { ExternalLink, Trash2 } from 'lucide-react'
+import { ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { getEmploymentTypeColor } from '#/shared/helpers'
 
 const statusColors: Record<JobStatus, string> = {
   saved: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export function JobCard({ job }: Props) {
+  const [showDescription, setShowDescription] = useState(false)
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
 
@@ -52,13 +55,51 @@ export function JobCard({ job }: Props) {
         </span>
       </div>
 
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {job.employmentType && (
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getEmploymentTypeColor(job.employmentType)}`}
+          >
+            {job.employmentType}
+          </span>
+        )}
+      </div>
+
       {job.location && (
         <p className="mb-1 text-xs text-zinc-400">{job.location}</p>
       )}
       {job.salary && (
-        <p className="mb-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <p className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
           {job.salary}
         </p>
+      )}
+      <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-zinc-400">
+        {job.recruiterName && <span>Recruiter: {job.recruiterName}</span>}
+        {job.publishedAt && <span>{job.publishedAt}</span>}
+      </div>
+
+      {job.description && (
+        <div className="mb-3">
+          <button
+            onClick={() => setShowDescription(!showDescription)}
+            className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            {showDescription ? (
+              <>
+                <ChevronUp size={12} /> Hide description
+              </>
+            ) : (
+              <>
+                <ChevronDown size={12} /> Show description
+              </>
+            )}
+          </button>
+          {showDescription && (
+            <p className="mt-1 line-clamp-6 whitespace-pre-wrap text-xs text-zinc-500 dark:text-zinc-400">
+              {job.description}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex items-center justify-between gap-2 border-t pt-3 dark:border-zinc-800">

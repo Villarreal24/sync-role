@@ -9,4 +9,8 @@ export interface JobPosting {
   createdAt: string
   location: string
   salary: string
+  description: string
+  recruiterName: string
+  publishedAt: string
+  employmentType: string
 }
