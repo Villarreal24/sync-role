@@ -4,3 +4,10 @@ __pycache__/
 *.pyc
 .DS_Store
 .pytest_cache/
+node_modules/
+**/node_modules/
+build/
+dist/
+out/
+*.tsbuildinfo
+**/.plasmo/
