@@ -32,6 +32,15 @@ export interface PageContent {
   pageContent: string
 }
 
+export type PanelState =
+  | "idle"
+  | "loading"
+  | "loaded"
+  | "scrape_error"
+  | "saving"
+  | "save_success"
+  | "save_error"
+
 export type PopupState =
   | "loading"
   | "loaded"

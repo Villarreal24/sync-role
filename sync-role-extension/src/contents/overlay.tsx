@@ -5,20 +5,11 @@ import { styles } from "../lib/styles"
 import { EMPLOYMENT_OPTIONS } from "../lib/constants"
 import { transformJobUrl } from "../lib/url-transform"
 import FloatingPanel from "../components/FloatingPanel"
-import type { FormState, ExtensionMessage, OverlayState } from "../lib/types"
+import type { FormState, PanelState, ExtensionMessage, OverlayState } from "../lib/types"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://*/*"],
 }
-
-type PanelState =
-  | "idle"
-  | "loading"
-  | "loaded"
-  | "scrape_error"
-  | "saving"
-  | "save_success"
-  | "save_error"
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -42,10 +33,16 @@ function Overlay() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [errorMsg, setErrorMsg] = useState("")
 
+  const resetFormState = () => {
+    setForm(INITIAL_FORM)
+    setState("idle")
+    setErrorMsg("")
+  }
+
   const loadData = useCallback(async () => {
     setState("loading")
     setErrorMsg("")
-    setForm((prev) => ({ ...prev, requiredError: "" }))
+    setForm(INITIAL_FORM)
 
     try {
       const jobUrl = transformJobUrl(window.location.href)
@@ -67,6 +64,7 @@ function Overlay() {
       })
       setState("loaded")
     } catch (err) {
+      setForm(INITIAL_FORM)
       setErrorMsg(err instanceof Error ? err.message : "Unknown error")
       setState("scrape_error")
     }
@@ -85,6 +83,7 @@ function Overlay() {
         loadData()
       }
       if (msg.type === "HIDE_OVERLAY") {
+        resetFormState()
         setVisible(false)
       }
       if (msg.type === "GET_OVERLAY_STATE") {
@@ -118,7 +117,10 @@ function Overlay() {
       })
       setState("save_success")
       chrome.runtime.sendMessage<ExtensionMessage>({ type: "OVERLAY_SAVED" })
-      setTimeout(() => setVisible(false), 1500)
+      setTimeout(() => {
+        resetFormState()
+        setVisible(false)
+      }, 1500)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Failed to save")
       setState("save_error")
@@ -312,7 +314,10 @@ function Overlay() {
       loading={state === "loading"}
       loadingMessage="Scraping and getting position data"
       onMinimize={() => setMinimized(!minimized)}
-      onClose={() => setVisible(false)}
+      onClose={() => {
+        resetFormState()
+        setVisible(false)
+      }}
     >
       {renderBody()}
     </FloatingPanel>
