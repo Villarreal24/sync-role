@@ -5,7 +5,6 @@ import { styles } from "../lib/styles"
 import { EMPLOYMENT_OPTIONS } from "../lib/constants"
 import { transformJobUrl } from "../lib/url-transform"
 import FloatingPanel from "../components/FloatingPanel"
-import Skeleton from "../components/Skeleton"
 import type { FormState, ExtensionMessage, OverlayState } from "../lib/types"
 
 export const config: PlasmoCSConfig = {
@@ -43,28 +42,6 @@ function Overlay() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [errorMsg, setErrorMsg] = useState("")
 
-  useEffect(() => {
-    const handler = (
-      msg: ExtensionMessage,
-      _sender: chrome.runtime.MessageSender,
-      sendResponse: (response: OverlayState) => void,
-    ) => {
-      if (msg.type === "SHOW_OVERLAY") {
-        setVisible(true)
-        setMinimized(false)
-      }
-      if (msg.type === "HIDE_OVERLAY") {
-        setVisible(false)
-      }
-      if (msg.type === "GET_OVERLAY_STATE") {
-        sendResponse({ visible: visibleRef.current })
-        return true
-      }
-    }
-    chrome.runtime.onMessage.addListener(handler)
-    return () => chrome.runtime.onMessage.removeListener(handler)
-  }, [])
-
   const loadData = useCallback(async () => {
     setState("loading")
     setErrorMsg("")
@@ -96,10 +73,28 @@ function Overlay() {
   }, [])
 
   useEffect(() => {
-    if (visible && state === "idle") {
-      loadData()
+    const handler = (
+      msg: ExtensionMessage,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response: OverlayState) => void,
+    ) => {
+      if (msg.type === "SHOW_OVERLAY") {
+        setState("loading")
+        setVisible(true)
+        setMinimized(false)
+        loadData()
+      }
+      if (msg.type === "HIDE_OVERLAY") {
+        setVisible(false)
+      }
+      if (msg.type === "GET_OVERLAY_STATE") {
+        sendResponse({ visible: visibleRef.current })
+        return true
+      }
     }
-  }, [visible, state, loadData])
+    chrome.runtime.onMessage.addListener(handler)
+    return () => chrome.runtime.onMessage.removeListener(handler)
+  }, [loadData])
 
   const handleSave = async () => {
     if (!form.title.trim() || !form.company.trim()) {
@@ -132,7 +127,7 @@ function Overlay() {
 
   const renderBody = () => {
     if (state === "loading") {
-      return <Skeleton />
+      return null
     }
 
     if (state === "scrape_error" || state === "save_error") {
@@ -260,6 +255,7 @@ function Overlay() {
           />
         </div>
 
+        {/*
         <div style={styles.fieldGroup as React.CSSProperties}>
           <label style={styles.label as React.CSSProperties}>Descripción</label>
           <textarea
@@ -270,6 +266,7 @@ function Overlay() {
             rows={3}
           />
         </div>
+        */}
 
         {form.requiredError && (
           <div style={{ ...styles.errorBox, marginTop: 0, marginBottom: 8 } as React.CSSProperties}>
@@ -312,6 +309,8 @@ function Overlay() {
     <FloatingPanel
       hidden={!visible}
       minimized={minimized}
+      loading={state === "loading"}
+      loadingMessage="Scraping and getting position data"
       onMinimize={() => setMinimized(!minimized)}
       onClose={() => setVisible(false)}
     >

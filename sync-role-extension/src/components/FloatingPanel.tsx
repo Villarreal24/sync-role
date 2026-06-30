@@ -1,20 +1,24 @@
 import { useState, useRef, useEffect, type ReactNode } from "react"
+import LoadingSpinner from "./LoadingSpinner"
 
 interface Props {
   hidden: boolean
   minimized: boolean
+  loading: boolean
+  loadingMessage: string
   onMinimize: () => void
   onClose: () => void
   children: ReactNode
 }
 
-function FloatingPanel({ hidden, minimized, onMinimize, onClose, children }: Props) {
+function FloatingPanel({ hidden, minimized, loading, loadingMessage, onMinimize, onClose, children }: Props) {
   const [position, setPosition] = useState({ x: window.innerWidth - 420, y: 80 })
   const panelRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const minimizeRef = useRef<HTMLButtonElement>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
+  const isDraggingRef = useRef(false)
 
   useEffect(() => {
     const btn = closeRef.current
@@ -51,6 +55,11 @@ function FloatingPanel({ hidden, minimized, onMinimize, onClose, children }: Pro
     const onMouseDown = (e: MouseEvent) => {
       if ((e.target as HTMLElement).tagName === "BUTTON") return
 
+      isDraggingRef.current = true
+      header.style.cursor = "grabbing"
+      document.body.style.cursor = "grabbing"
+      document.body.style.userSelect = "none"
+
       dragOffset.current = {
         x: e.clientX - position.x,
         y: e.clientY - position.y,
@@ -64,6 +73,10 @@ function FloatingPanel({ hidden, minimized, onMinimize, onClose, children }: Pro
       }
 
       const onMouseUp = () => {
+        isDraggingRef.current = false
+        header.style.cursor = "grab"
+        document.body.style.userSelect = ""
+        document.body.style.cursor = ""
         document.removeEventListener("mousemove", onMouseMove)
         document.removeEventListener("mouseup", onMouseUp)
       }
@@ -77,24 +90,26 @@ function FloatingPanel({ hidden, minimized, onMinimize, onClose, children }: Pro
   }, [position])
 
   return (
-    <div
-      ref={panelRef}
-      style={{
-        display: hidden ? "none" : undefined,
-        position: "fixed",
-        top: position.y,
-        left: position.x,
-        zIndex: 999999,
-        width: 380,
-        backgroundColor: "#18181b",
-        borderRadius: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-        border: "1px solid #27272a",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        fontSize: 13,
-        color: "#e4e4e7",
-      }}
-    >
+    <>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div
+        ref={panelRef}
+        style={{
+          display: hidden ? "none" : undefined,
+          position: "fixed",
+          top: position.y,
+          left: position.x,
+          zIndex: 999999,
+          width: 380,
+          backgroundColor: "#18181b",
+          borderRadius: 12,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          border: "1px solid #27272a",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          fontSize: 13,
+          color: "#e4e4e7",
+        }}
+      >
       <div
         ref={headerRef}
         style={{
@@ -149,10 +164,11 @@ function FloatingPanel({ hidden, minimized, onMinimize, onClose, children }: Pro
       </div>
       {!minimized && (
         <div style={{ padding: 14, maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
-          {children}
+          {loading ? <LoadingSpinner message={loadingMessage} /> : children}
         </div>
       )}
     </div>
+    </>
   )
 }
 
