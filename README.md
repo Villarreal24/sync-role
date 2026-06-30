@@ -36,21 +36,22 @@ React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py �
 | Backend | Python 3.13, FastAPI, Pydantic, supabase-py, OpenAI, Uvicorn |
 | Database | Supabase (Postgres) |
 | LLM | GPT-4o-mini (data extraction from raw page text) |
-| Testing | pytest + httpx (backend), Vitest (frontend) |
+| Testing | pytest + httpx (backend), Vitest (frontend), Vitest (extension) |
 
 ## Project Structure
 
 ```
 ├── .env                          # Backend credentials (gitignored)
 ├── .gitignore
-├── Makefile                      # Dev commands (install, run, test, seed)
+├── Makefile                      # Dev commands (install, run, test)
 ├── docs/
 │   ├── SDD.md                    # Software Design Document (backend + web)
 │   └── EXTENSION-SDD.md          # Software Design Document (extension)
 ├── supabase/
 │   └── migrations/
 │       ├── 001_create_job_postings.sql
-│       └── 002_add_extension_fields.sql
+│       ├── 002_add_extension_fields.sql
+│       └── 003_add_new_fields.sql
 ├── sync-role/                    # React 19 + TanStack Start frontend
 │   ├── src/
 │   │   ├── core/api/             # API client, query client
@@ -77,7 +78,6 @@ React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py �
 │   ├── database.py               # Supabase client singleton
 │   ├── main.py                   # FastAPI app + routes + LLM scraping
 │   ├── schemas.py                # Pydantic models
-│   ├── seed.py                   # Dummy data seeder (12 job postings)
 │   └── requirements.txt
 └── .agents/                      # AI coding agent skills
 ```
@@ -102,9 +102,6 @@ make run
 
 # Run tests
 make test
-
-# Seed database with dummy data (12 job postings)
-make seed
 ```
 
 ### Frontend Setup
@@ -129,6 +126,9 @@ pnpm install
 
 # Start dev server (hot-reload)
 pnpm dev
+
+# Run tests
+pnpm test
 
 # Production build
 pnpm build
@@ -161,6 +161,10 @@ job_postings
 ├── description     TEXT DEFAULT ''
 ├── recruiter_name  TEXT DEFAULT ''
 ├── published_at    TEXT DEFAULT ''
-├── employment_type TEXT DEFAULT ''
+├── employment_type TEXT DEFAULT ''       -- Full-time / Part-time / Contract / Freelance / Internship
+├── work_mode       TEXT DEFAULT ''       -- Remote / Hybrid / On-site
+├── seniority       TEXT DEFAULT ''       -- Junior / Mid / Senior / Staff / Principal
+├── technologies    TEXT[] DEFAULT '{}'   -- Array of technology tags
+├── user_id         UUID DEFAULT NULL     -- For future multi-tenant auth
 └── created_at      TIMESTAMPTZ DEFAULT now()
 ```

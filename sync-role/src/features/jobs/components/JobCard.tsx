@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import type { JobPosting, JobStatus } from '../types'
 import { ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
-import { getEmploymentTypeColor } from '#/shared/helpers'
+import { getWorkModeColor, getEmploymentTypeColor, getSeniorityColor } from '#/shared/helpers'
 
 const statusColors: Record<JobStatus, string> = {
   saved: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
@@ -56,11 +56,25 @@ export function JobCard({ job }: Props) {
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
+        {job.workMode && (
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getWorkModeColor(job.workMode)}`}
+          >
+            {job.workMode}
+          </span>
+        )}
         {job.employmentType && (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getEmploymentTypeColor(job.employmentType)}`}
           >
             {job.employmentType}
+          </span>
+        )}
+        {job.seniority && (
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getSeniorityColor(job.seniority)}`}
+          >
+            {job.seniority}
           </span>
         )}
       </div>
@@ -77,6 +91,19 @@ export function JobCard({ job }: Props) {
         {job.recruiterName && <span>Recruiter: {job.recruiterName}</span>}
         {job.publishedAt && <span>{job.publishedAt}</span>}
       </div>
+
+      {job.technologies.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {job.technologies.map((tech) => (
+            <span
+              key={tech}
+              className="inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              {tech}
+            </span>
+          ))}
+        </div>
+      )}
 
       {job.description && (
         <div className="mb-3">

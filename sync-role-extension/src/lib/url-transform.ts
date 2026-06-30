@@ -21,6 +21,14 @@ const TRANSFORMERS: SiteTransformer[] = [
       return id ? `https://www.linkedin.com/jobs/view/${id}/` : null
     },
   },
+  {
+    hostname: /(^|\.)occ\.com\.mx$/i,
+    test: (url) => url.pathname.startsWith("/empleos/") && url.searchParams.has("jobid"),
+    transform: (url) => {
+      const id = url.searchParams.get("jobid")
+      return id ? `${url.origin}/empleo/${id}` : null
+    },
+  },
 ]
 
 export function transformJobUrl(raw: string): string {

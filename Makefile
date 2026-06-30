@@ -1,4 +1,4 @@
-.PHONY: run test seed install clean
+.PHONY: run test install clean
 
 PYTHON = .venv/bin/python
 UVICORN = .venv/bin/uvicorn
@@ -15,9 +15,6 @@ run: install
 
 test: install
 	$(PYTHON) -m pytest syncRoleBackend/test_main.py -v
-
-seed: install
-	$(PYTHON) -m syncRoleBackend.seed
 
 clean:
 	rm -rf .venv __pycache__ .pytest_cache

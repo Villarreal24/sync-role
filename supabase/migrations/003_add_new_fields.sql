@@ -1,20 +1,13 @@
-"""Helper script to apply Supabase migration.
-Opens the Supabase SQL editor URL for manual execution.
-
-Steps:
-1. Go to: https://supabase.com/dashboard/project/kicwqgyzxygujewlvxpv/sql/new
-2. Paste the SQL below
-3. Click "Run"
-"""
-
-MIGRATION_SQL = """\
 -- Migration 003: Add work_mode, seniority, technologies, user_id
+-- Split existing employment_type into work_mode + employment_type
+
 ALTER TABLE job_postings
   ADD COLUMN IF NOT EXISTS work_mode TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS seniority TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS technologies TEXT[] NOT NULL DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT NULL;
 
+-- Migrate existing data: move work-mode values from employment_type to work_mode
 UPDATE job_postings
 SET
   work_mode = CASE
@@ -31,19 +24,3 @@ SET
 CREATE INDEX IF NOT EXISTS idx_job_postings_user_id ON job_postings(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_postings_work_mode ON job_postings(work_mode);
 CREATE INDEX IF NOT EXISTS idx_job_postings_seniority ON job_postings(seniority);
-"""
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Supabase Migration Helper")
-    print("=" * 60)
-    print()
-    print("1. Open your Supabase project dashboard:")
-    print("   https://supabase.com/dashboard/project/kicwqgyzxygujewlvxpv/sql/new")
-    print()
-    print("2. Copy and paste this SQL:")
-    print()
-    print(MIGRATION_SQL)
-    print()
-    print("3. Click 'Run' to apply the migration.")
-    print("4. Run `make test` to verify all tests pass.")

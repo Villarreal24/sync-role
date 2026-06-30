@@ -1,3 +1,5 @@
+import json as _json
+from datetime import date as _date
 from typing import List
 
 from fastapi import FastAPI, HTTPException
@@ -88,24 +90,68 @@ async def update_job(job_id: str, job_update: JobPostingUpdate):
 
 
 SCRAPE_SYSTEM_PROMPT = """\
-Eres un extractor de datos de ofertas de empleo. Del siguiente texto de página web, \
-extrae la información relevante de la oferta de trabajo.
+You are an expert HR data extraction and normalization system. \
+Your objective is to analyze text extracted from a job posting webpage and structure the key information, \
+completely ignoring noise such as navigation menus, cookie banners, or irrelevant links.
 
-Devuelve SOLO un objeto JSON válido con estos campos (todos strings):
-- title: título del puesto
-- company: nombre de la empresa
-- source_url: URL de la oferta
-- location: ubicación (ciudad, país, o "Remote")
-- salary: rango salarial
-- description: descripción completa del puesto
-- recruiter_name: nombre del reclutador (si aparece, si no string vacío)
-- published_at: fecha de publicación ("hace X días" o fecha concreta)
-- employment_type: tipo de empleo ("Presencial", "Híbrido", "Remoto", \
-"Full-time", "Part-time", "Contract", o string vacío)
+EXTRACTION RULES:
+1. Precision: Extract only data that explicitly appears or can be inferred with high confidence from the provided text.
+2. Description Formatting: The "description" field MUST NOT be a single wall of text. You must clean and structure it:
+   - Use double newlines (\\n\\n) to separate paragraphs or distinct sections (e.g., "About the Company", "Requirements", "Benefits").
+   - Use a newline followed by a hyphen (\\n-) to create bullet points for lists (e.g., daily responsibilities, qualifications).
+3. Empty Values: If a specific data point is missing or cannot be inferred, you MUST return empty string "" (do not use null).
+4. Output Restriction: Return ONLY a valid JSON object. DO NOT include markdown formatting (like ```json), conversational greetings, or any additional explanations.
 
-Si un campo no se encuentra en el texto, devuelve string vacío.
-NO incluyas markdown ni texto adicional — solo el JSON.
+REQUIRED JSON STRUCTURE:
+{
+  "title": "Official job title",
+  "company": "Hiring company name",
+  "source_url": "URL of the job posting (if provided in the text, otherwise empty string)",
+  "location": "Location (City, State, Country, or empty string)",
+  "work_mode": "Strictly choose one: 'Remote', 'Hybrid', 'On-site', or empty string",
+  "employment_type": "Strictly choose one: 'Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship', or empty string",
+  "salary": "Salary range or compensation (e.g., '$80k - $100k USD' or empty string)",
+  "technologies": ["Array of strings containing the main technologies, programming languages, or software tools detected"],
+  "seniority": "Inferred experience level. Strictly choose from: 'Junior', 'Mid', 'Senior', 'Staff', 'Principal', or empty string",
+  "description": "Structured and clean text with proper newlines (\\n) detailing the complete job posting.",
+  "recruiter_name": "Name of the recruiter or direct contact (if available, otherwise empty string)",
+   "published_at": "Publication date. Prefer YYYY-MM-DD format (e.g., '2026-06-29'). If a relative date is found (e.g., 'Ayer', '3 days ago', 'hace 2 semanas'), convert it using today's date. If you are uncertain about the conversion, return the relative date string as-is (e.g., 'Ayer', '3 days ago'). If no date reference is found at all, return empty string."
+}
 """
+
+
+_RETRY_TOKEN_LIMITS = [2000, 3000, 4000]
+
+
+def _call_llm(client: OpenAI, req: ScrapeRequest, max_tokens: int) -> str:
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": SCRAPE_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": f"URL: {req.url}\nToday's date: {_date.today().isoformat()}\n\n---\n\n{req.page_content}",
+            },
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.1,
+        max_tokens=max_tokens,
+    )
+    raw = resp.choices[0].message.content
+    if not raw:
+        raise ValueError("LLM returned empty response")
+    return raw
+
+
+def _extract_data(raw: str) -> dict:
+    return _json.loads(raw)
+
+
+_RETRY_EXHAUSTED_MSG = (
+    "The job posting could not be fully processed. "
+    "The page content is too large or complex for the extraction system. "
+    "Please verify the job posting URL and try again with a shorter page."
+)
 
 
 @app.post("/api/v1/scrape", response_model=ScrapeResponse)
@@ -116,49 +162,36 @@ async def scrape_job(req: ScrapeRequest):
             status_code=501,
             detail="OpenAI not configured. Set OPENAI_API_KEY in .env",
         )
-    try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": SCRAPE_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"URL: {req.url}\n\n---\n\n{req.page_content}",
-                },
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.1,
-            max_tokens=1000,
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=502, detail=f"LLM call failed: {str(e)}"
-        )
 
-    raw = resp.choices[0].message.content
-    if not raw:
-        raise HTTPException(status_code=502, detail="LLM returned empty response")
+    last_error = None
+    for max_tokens in _RETRY_TOKEN_LIMITS:
+        try:
+            raw = _call_llm(client, req, max_tokens)
+            data = _extract_data(raw)
+        except _json.JSONDecodeError:
+            last_error = _RETRY_EXHAUSTED_MSG
+            continue
+        except Exception as e:
+            raise HTTPException(
+                status_code=502, detail=f"LLM call failed: {str(e)}"
+            )
 
-    import json
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=502, detail=f"LLM returned invalid JSON: {raw[:200]}"
+        return ScrapeResponse(
+            title=data.get("title", ""),
+            company=data.get("company", ""),
+            source_url=req.url,
+            location=data.get("location", ""),
+            salary=data.get("salary", ""),
+            description=data.get("description", ""),
+            recruiter_name=data.get("recruiter_name", ""),
+            published_at=data.get("published_at", ""),
+            employment_type=data.get("employment_type", ""),
+            work_mode=data.get("work_mode", ""),
+            seniority=data.get("seniority", ""),
+            technologies=data.get("technologies", []),
         )
 
-    return ScrapeResponse(
-        title=data.get("title", ""),
-        company=data.get("company", ""),
-        source_url=req.url,
-        location=data.get("location", ""),
-        salary=data.get("salary", ""),
-        description=data.get("description", ""),
-        recruiter_name=data.get("recruiter_name", ""),
-        published_at=data.get("published_at", ""),
-        employment_type=data.get("employment_type", ""),
-    )
+    raise HTTPException(status_code=502, detail=last_error or _RETRY_EXHAUSTED_MSG)
 
 
 @app.delete("/api/v1/jobs/{job_id}")

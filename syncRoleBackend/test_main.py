@@ -1,5 +1,7 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from syncRoleBackend.config import settings
 from syncRoleBackend.main import app
 
 client = TestClient(app)
@@ -28,7 +30,10 @@ def test_create_job():
         "description": "A great job",
         "recruiterName": "Jane",
         "publishedAt": "hace 2 días",
-        "employmentType": "Remoto",
+        "employmentType": "Full-time",
+        "workMode": "Remote",
+        "seniority": "Senior",
+        "technologies": ["Python", "FastAPI"],
     }
     resp = client.post("/api/v1/jobs", json=payload)
     assert resp.status_code == 200
@@ -39,7 +44,10 @@ def test_create_job():
     assert data["description"] == "A great job"
     assert data["recruiterName"] == "Jane"
     assert data["publishedAt"] == "hace 2 días"
-    assert data["employmentType"] == "Remoto"
+    assert data["employmentType"] == "Full-time"
+    assert data["workMode"] == "Remote"
+    assert data["seniority"] == "Senior"
+    assert data["technologies"] == ["Python", "FastAPI"]
     assert "id" in data
     assert "createdAt" in data
 
@@ -58,6 +66,9 @@ def test_create_job_defaults():
     assert data["recruiterName"] == ""
     assert data["publishedAt"] == ""
     assert data["employmentType"] == ""
+    assert data["workMode"] == ""
+    assert data["seniority"] == ""
+    assert data["technologies"] == []
 
 
 def test_update_job():
@@ -77,6 +88,28 @@ def test_update_job():
     )
     assert update_resp.status_code == 200
     assert update_resp.json()["status"] == "interviewing"
+
+
+def test_update_job_partial_new_fields():
+    create_resp = client.post(
+        "/api/v1/jobs",
+        json={
+            "title": "Partial Update",
+            "company": "PartCorp",
+            "sourceUrl": "https://part.com",
+        },
+    )
+    job_id = create_resp.json()["id"]
+
+    update_resp = client.patch(
+        f"/api/v1/jobs/{job_id}",
+        json={"seniority": "Senior", "workMode": "Remote"},
+    )
+    assert update_resp.status_code == 200
+    data = update_resp.json()
+    assert data["seniority"] == "Senior"
+    assert data["workMode"] == "Remote"
+    assert data["employmentType"] == ""
 
 
 def test_delete_job():
@@ -110,6 +143,8 @@ def test_update_nonexistent_job():
 
 def test_scrape_no_openai_key():
     """Without OPENAI_API_KEY set, scrape should return 501."""
+    if settings.openai_api_key:
+        pytest.skip("OPENAI_API_KEY is set — scrape would succeed, not return 501")
     resp = client.post(
         "/api/v1/scrape",
         json={

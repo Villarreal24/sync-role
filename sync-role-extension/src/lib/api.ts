@@ -25,6 +25,9 @@ export async function createJob(data: JobPostingPayload): Promise<void> {
     recruiterName: data.recruiter_name,
     publishedAt: data.published_at,
     employmentType: data.employment_type,
+    workMode: data.work_mode,
+    seniority: data.seniority,
+    technologies: data.technologies,
   }
   const res = await fetch(`${BACKEND_URL}/jobs`, {
     method: "POST",

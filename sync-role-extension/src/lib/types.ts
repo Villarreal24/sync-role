@@ -13,6 +13,9 @@ export interface ScrapeResponse {
   recruiter_name: string
   published_at: string
   employment_type: string
+  work_mode: string
+  seniority: string
+  technologies: string[]
 }
 
 export interface JobPostingPayload {
@@ -25,6 +28,9 @@ export interface JobPostingPayload {
   recruiter_name: string
   published_at: string
   employment_type: string
+  work_mode: string
+  seniority: string
+  technologies: string[]
 }
 
 export interface PageContent {
@@ -60,6 +66,9 @@ export interface FormState {
   recruiterName: string
   publishedAt: string
   employmentType: string
+  workMode: string
+  seniority: string
+  technologies: string
   requiredError: string
 }
 
@@ -80,5 +89,6 @@ export const JOB_SITE_PATTERNS = [
   /remote\.co\/remote-jobs\//i,
   /arc\.dev\/jobs\//i,
   /occmundial\.com\/empleo\//i,
+  /occ\.com\.mx\/(empleos?|empleo)\//i,
   /upwork\.com\/job\//i,
 ]

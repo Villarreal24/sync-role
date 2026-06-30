@@ -21,6 +21,9 @@ class JobPostingCreate(BaseModel):
     recruiter_name: str = Field("", alias="recruiterName")
     published_at: str = Field("", alias="publishedAt")
     employment_type: str = Field("", alias="employmentType")
+    work_mode: str = Field("", alias="workMode")
+    seniority: str = ""
+    technologies: list[str] = Field(default_factory=list)
 
     def model_dump_db(self) -> dict:
         raw = self.model_dump()
@@ -42,6 +45,9 @@ class JobPostingUpdate(BaseModel):
     recruiter_name: Optional[str] = Field(None, alias="recruiterName")
     published_at: Optional[str] = Field(None, alias="publishedAt")
     employment_type: Optional[str] = Field(None, alias="employmentType")
+    work_mode: Optional[str] = Field(None, alias="workMode")
+    seniority: Optional[str] = None
+    technologies: Optional[list[str]] = None
 
 
 class JobPostingResponse(BaseModel):
@@ -57,6 +63,9 @@ class JobPostingResponse(BaseModel):
     recruiterName: str
     publishedAt: str
     employmentType: str
+    workMode: str
+    seniority: str
+    technologies: list[str]
 
     @classmethod
     def from_db_row(cls, row: dict) -> "JobPostingResponse":
@@ -77,6 +86,9 @@ class JobPostingResponse(BaseModel):
             recruiterName=row.get("recruiter_name", ""),
             publishedAt=row.get("published_at", ""),
             employmentType=row.get("employment_type", ""),
+            workMode=row.get("work_mode", ""),
+            seniority=row.get("seniority", ""),
+            technologies=row.get("technologies") or [],
         )
 
 
@@ -95,6 +107,9 @@ class ScrapeResponse(BaseModel):
     recruiter_name: str
     published_at: str
     employment_type: str
+    work_mode: str
+    seniority: str
+    technologies: list[str] = Field(default_factory=list)
 
 
 def _new_id() -> str:

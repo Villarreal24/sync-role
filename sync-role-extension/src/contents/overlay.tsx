@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import type { PlasmoCSConfig } from "plasmo"
 import { scrapePage, createJob } from "../lib/api"
 import { styles } from "../lib/styles"
-import { EMPLOYMENT_OPTIONS } from "../lib/constants"
+import { WORK_MODE_OPTIONS, EMPLOYMENT_TYPE_OPTIONS, SENIORITY_OPTIONS } from "../lib/constants"
 import { transformJobUrl } from "../lib/url-transform"
 import FloatingPanel from "../components/FloatingPanel"
 import type { FormState, PanelState, ExtensionMessage, OverlayState } from "../lib/types"
@@ -21,6 +21,9 @@ const INITIAL_FORM: FormState = {
   recruiterName: "",
   publishedAt: "",
   employmentType: "",
+  workMode: "",
+  seniority: "",
+  technologies: "",
   requiredError: "",
 }
 
@@ -60,6 +63,9 @@ function Overlay() {
         recruiterName: result.recruiter_name,
         publishedAt: result.published_at,
         employmentType: result.employment_type,
+        workMode: result.work_mode,
+        seniority: result.seniority,
+        technologies: (result.technologies || []).join(", "),
         requiredError: "",
       })
       setState("loaded")
@@ -103,6 +109,11 @@ function Overlay() {
     setState("saving")
     setForm((prev) => ({ ...prev, requiredError: "" }))
 
+    const technologies = form.technologies
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+
     try {
       await createJob({
         title: form.title.trim(),
@@ -114,6 +125,9 @@ function Overlay() {
         recruiter_name: form.recruiterName.trim(),
         published_at: form.publishedAt.trim(),
         employment_type: form.employmentType.trim(),
+        work_mode: form.workMode.trim(),
+        seniority: form.seniority.trim(),
+        technologies,
       })
       setState("save_success")
       chrome.runtime.sendMessage<ExtensionMessage>({ type: "OVERLAY_SAVED" })
@@ -223,13 +237,44 @@ function Overlay() {
 
         <div style={{ display: "flex", gap: 12 }}>
           <div style={{ ...styles.fieldGroup, flex: 1 } as React.CSSProperties}>
-            <label style={styles.label as React.CSSProperties}>Tipo</label>
+            <label style={styles.label as React.CSSProperties}>Work Mode</label>
+            <select
+              style={styles.select as React.CSSProperties}
+              value={form.workMode}
+              onChange={(e) => setForm((prev) => ({ ...prev, workMode: e.target.value }))}
+            >
+              {WORK_MODE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt || "Select..."}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ ...styles.fieldGroup, flex: 1 } as React.CSSProperties}>
+            <label style={styles.label as React.CSSProperties}>Type</label>
             <select
               style={styles.select as React.CSSProperties}
               value={form.employmentType}
               onChange={(e) => setForm((prev) => ({ ...prev, employmentType: e.target.value }))}
             >
-              {EMPLOYMENT_OPTIONS.map((opt) => (
+              {EMPLOYMENT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt || "Select..."}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ ...styles.fieldGroup, flex: 1 } as React.CSSProperties}>
+            <label style={styles.label as React.CSSProperties}>Seniority</label>
+            <select
+              style={styles.select as React.CSSProperties}
+              value={form.seniority}
+              onChange={(e) => setForm((prev) => ({ ...prev, seniority: e.target.value }))}
+            >
+              {SENIORITY_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt || "Select..."}
                 </option>
@@ -247,28 +292,26 @@ function Overlay() {
           </div>
         </div>
 
-        <div style={styles.fieldGroup as React.CSSProperties}>
-          <label style={styles.label as React.CSSProperties}>Publicado</label>
-          <input
-            style={styles.input as React.CSSProperties}
-            value={form.publishedAt}
-            onChange={(e) => setForm((prev) => ({ ...prev, publishedAt: e.target.value }))}
-            placeholder="e.g. hace 3 días"
-          />
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ ...styles.fieldGroup, flex: 1 } as React.CSSProperties}>
+            <label style={styles.label as React.CSSProperties}>Technologies</label>
+            <input
+              style={styles.input as React.CSSProperties}
+              value={form.technologies}
+              onChange={(e) => setForm((prev) => ({ ...prev, technologies: e.target.value }))}
+              placeholder="React, Python, SQL..."
+            />
+          </div>
+          <div style={{ ...styles.fieldGroup, flex: 1 } as React.CSSProperties}>
+            <label style={styles.label as React.CSSProperties}>Publicado</label>
+            <input
+              style={styles.input as React.CSSProperties}
+              value={form.publishedAt}
+              onChange={(e) => setForm((prev) => ({ ...prev, publishedAt: e.target.value }))}
+              placeholder="e.g. 3 days ago"
+            />
+          </div>
         </div>
-
-        {/*
-        <div style={styles.fieldGroup as React.CSSProperties}>
-          <label style={styles.label as React.CSSProperties}>Descripción</label>
-          <textarea
-            style={styles.textarea as React.CSSProperties}
-            value={form.description}
-            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Job description"
-            rows={3}
-          />
-        </div>
-        */}
 
         {form.requiredError && (
           <div style={{ ...styles.errorBox, marginTop: 0, marginBottom: 8 } as React.CSSProperties}>

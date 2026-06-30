@@ -13,4 +13,7 @@ export interface JobPosting {
   recruiterName: string
   publishedAt: string
   employmentType: string
+  workMode: string
+  seniority: string
+  technologies: string[]
 }
