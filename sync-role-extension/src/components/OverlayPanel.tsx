@@ -1,15 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import type { PlasmoCSConfig } from "plasmo"
 import { scrapePage, createJob } from "../lib/api"
 import { styles } from "../lib/styles"
 import { WORK_MODE_OPTIONS, EMPLOYMENT_TYPE_OPTIONS, SENIORITY_OPTIONS } from "../lib/constants"
 import { transformJobUrl } from "../lib/url-transform"
-import FloatingPanel from "../components/FloatingPanel"
+import { JOB_SITE_PATTERNS, extractCompanyFromDomain } from "../lib/types"
 import type { FormState, PanelState, ExtensionMessage, OverlayState } from "../lib/types"
-
-export const config: PlasmoCSConfig = {
-  matches: ["https://*/*"],
-}
+import FloatingPanel from "./FloatingPanel"
 
 const INITIAL_FORM: FormState = {
   title: "",
@@ -35,20 +31,26 @@ function Overlay() {
   const [state, setState] = useState<PanelState>("idle")
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [errorMsg, setErrorMsg] = useState("")
+  const [fallbackWarning, setFallbackWarning] = useState(false)
 
   const resetFormState = () => {
     setForm(INITIAL_FORM)
     setState("idle")
     setErrorMsg("")
+    setFallbackWarning(false)
   }
 
   const loadData = useCallback(async () => {
     setState("loading")
     setErrorMsg("")
+    setFallbackWarning(false)
     setForm(INITIAL_FORM)
 
+    const sourceUrl = window.location.href
+    const isKnownSite = JOB_SITE_PATTERNS.some((p) => p.test(sourceUrl))
+
     try {
-      const jobUrl = transformJobUrl(window.location.href)
+      const jobUrl = transformJobUrl(sourceUrl)
       const result = await scrapePage({
         url: jobUrl,
         page_content: document.body.innerText,
@@ -70,9 +72,19 @@ function Overlay() {
       })
       setState("loaded")
     } catch (err) {
-      setForm(INITIAL_FORM)
-      setErrorMsg(err instanceof Error ? err.message : "Unknown error")
-      setState("scrape_error")
+      if (isKnownSite) {
+        setErrorMsg(err instanceof Error ? err.message : "Unknown error")
+        setState("scrape_error")
+      } else {
+        const companyFromUrl = extractCompanyFromDomain(sourceUrl)
+        setForm({
+          ...INITIAL_FORM,
+          sourceUrl,
+          company: companyFromUrl || "",
+        })
+        setFallbackWarning(true)
+        setState("loaded")
+      }
     }
   }, [])
 
@@ -174,6 +186,11 @@ function Overlay() {
 
     return (
       <>
+        {fallbackWarning && (
+          <div style={styles.warningBox as React.CSSProperties}>
+            Could not auto-extract job data — fill fields manually
+          </div>
+        )}
         <div style={styles.fieldGroup as React.CSSProperties}>
           <label style={styles.label as React.CSSProperties}>
             Puesto<span style={styles.requiredStar as React.CSSProperties}>*</span>

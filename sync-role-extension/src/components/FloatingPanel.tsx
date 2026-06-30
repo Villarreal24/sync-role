@@ -163,7 +163,17 @@ function FloatingPanel({ hidden, minimized, loading, loadingMessage, onMinimize,
         </div>
       </div>
       {!minimized && (
-        <div style={{ padding: 14, maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
+        <div
+          style={{
+            padding: 14,
+            height: "calc(100vh - 200px)",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: loading ? "center" : undefined,
+            boxSizing: "border-box",
+          }}
+        >
           {loading ? <LoadingSpinner message={loadingMessage} /> : children}
         </div>
       )}

@@ -81,6 +81,18 @@ export interface ExtensionMessage {
   payload?: PageContent | OverlayState
 }
 
+export function extractCompanyFromDomain(url: string): string | null {
+  try {
+    const segment = new URL(url).pathname.split("/").filter(Boolean)[0]
+    if (segment) {
+      return segment.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export const JOB_SITE_PATTERNS = [
   /linkedin\.com\/jobs\//i,
   /indeed\.com\/(view\/)?job/i,

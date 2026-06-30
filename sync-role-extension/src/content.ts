@@ -1,24 +1,20 @@
-import { JOB_SITE_PATTERNS } from "./lib/types"
+import React from "react"
+import { createRoot } from "react-dom/client"
 import type { ExtensionMessage } from "./lib/types"
+import OverlayPanel from "./components/OverlayPanel"
 
-function isJobPage(): boolean {
-  return JOB_SITE_PATTERNS.some((pattern) => pattern.test(window.location.href))
-}
-
-function getPageContent(): string {
-  return document.body.innerText
-}
-
-if (isJobPage()) {
-  chrome.runtime.sendMessage<ExtensionMessage>({ type: "PAGE_HAS_JOB" })
-}
+const container = document.createElement("div")
+container.id = "syncrole-overlay-root"
+document.body.appendChild(container)
+const root = createRoot(container)
+root.render(React.createElement(OverlayPanel))
 
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse) => {
     if (message.type === "GET_PAGE_CONTENT") {
       sendResponse({
         url: window.location.href,
-        pageContent: getPageContent(),
+        pageContent: document.body.innerText,
       } satisfies ExtensionMessage["payload"])
     }
   },

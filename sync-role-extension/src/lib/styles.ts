@@ -137,6 +137,16 @@ export const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     marginTop: 8,
   },
+  warningBox: {
+    padding: "10px 14px",
+    backgroundColor: "#1c1917",
+    border: "1px solid #78350f",
+    borderRadius: 8,
+    color: "#fbbf24",
+    fontSize: 12,
+    marginTop: 8,
+    marginBottom: 12,
+  },
   skeleton: {
     height: 14,
     backgroundColor: "#18181b",
