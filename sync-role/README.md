@@ -55,6 +55,10 @@ src/
 | `bun run test` | Run Vitest tests |
 | `bun run generate-routes` | Regenerate route tree |
 
+## Data Source
+
+Jobs are created via the **ApplySync browser extension** (Chrome MV3) which scrapes job postings from LinkedIn, Indeed, Glassdoor, and other sites using GPT-4o-mini extraction. They can also be created manually via the API.
+
 ## Backend
 
 The backend API runs at `http://localhost:8000/api/v1`. Start it from the project root:

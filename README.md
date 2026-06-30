@@ -1,41 +1,56 @@
 # ApplySync — Job Application Tracker
 
-A full-stack job application tracker with a Kanban board interface. Built with React 19 + TanStack Start on the frontend and FastAPI + Supabase on the backend.
+A full-stack job application tracker with a Kanban board interface and a browser extension for one-click job scraping. Built with React 19 + TanStack Start, FastAPI + OpenAI, and Supabase.
 
 ## Project Overview
 
-ApplySync helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The frontend and backend are fully decoupled, communicating via a REST API.
+ApplySync helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The **browser extension** (Chrome MV3) detects job postings on LinkedIn, Indeed, Glassdoor, and other sites, uses GPT-4o-mini to extract structured data, and saves it directly to the tracker with a single click.
 
 ## Architecture
 
 ```
-React 19 + TanStack Start (Frontend — sync-role/)
-        ↕  REST API (JSON) — port 8000
-FastAPI (Backend — syncRoleBackend/)
-        ↕  supabase-py
-Supabase (Postgres + Auth)
+                    ┌──────────────────────────────────────┐
+                    │  sync-role-extension (Chrome MV3)     │
+                    │  • Detects job pages via URL patterns │
+                    │  • Scrapes page text → LLM extraction │
+                    │  • Saves directly to backend           │
+                    └──────────┬───────────────────────────┘
+                               │ POST /api/v1/scrape
+                               │ POST /api/v1/jobs
+                               ▼
+React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py ──→ Supabase
+(sync-role/)                   (syncRoleBackend/)                   (Postgres)
+       ▲
+       │ GET /api/v1/jobs
+       │ PATCH /api/v1/jobs/{id}
+       │ DELETE /api/v1/jobs/{id}
+       └───────────────────────────────────────────────
 ```
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
+| Browser Extension | Plasmo 0.90, React 18, TypeScript 5, Chrome MV3 |
 | Frontend | React 19, TypeScript 6, TanStack Router, TanStack Start, TanStack Query, Zustand, Tailwind CSS v4, Vite 8 |
-| Backend | Python 3.13, FastAPI, Pydantic, supabase-py, Uvicorn |
+| Backend | Python 3.13, FastAPI, Pydantic, supabase-py, OpenAI, Uvicorn |
 | Database | Supabase (Postgres) |
-| Testing | pytest (backend), Vitest (frontend) |
+| LLM | GPT-4o-mini (data extraction from raw page text) |
+| Testing | pytest + httpx (backend), Vitest (frontend) |
 
 ## Project Structure
 
 ```
-├── .env                          # Backend Supabase credentials (gitignored)
+├── .env                          # Backend credentials (gitignored)
 ├── .gitignore
-├── Makefile                      # Dev commands
+├── Makefile                      # Dev commands (install, run, test, seed)
 ├── docs/
-│   └── SDD.md                    # Software Design Document
+│   ├── SDD.md                    # Software Design Document (backend + web)
+│   └── EXTENSION-SDD.md          # Software Design Document (extension)
 ├── supabase/
 │   └── migrations/
-│       └── 001_create_job_postings.sql
+│       ├── 001_create_job_postings.sql
+│       └── 002_add_extension_fields.sql
 ├── sync-role/                    # React 19 + TanStack Start frontend
 │   ├── src/
 │   │   ├── core/api/             # API client, query client
@@ -48,16 +63,23 @@ Supabase (Postgres + Auth)
 │   │   ├── routes/               # TanStack file-based router
 │   │   └── styles.css
 │   └── package.json
+├── sync-role-extension/          # Chrome MV3 browser extension
+│   ├── src/
+│   │   ├── popup.tsx             # Extension popup UI
+│   │   ├── background.ts         # Service worker (badge management)
+│   │   ├── content.ts            # Content script (job page detection)
+│   │   ├── contents/overlay.tsx  # Floating panel overlay (scrape + save)
+│   │   ├── components/           # FloatingPanel, LoadingSpinner
+│   │   └── lib/                  # API client, types, styles, constants, URL transforms
+│   └── package.json
 ├── syncRoleBackend/              # FastAPI backend
-│   ├── __init__.py
 │   ├── config.py                 # pydantic-settings (env loader)
 │   ├── database.py               # Supabase client singleton
-│   ├── main.py                   # FastAPI app + routes
+│   ├── main.py                   # FastAPI app + routes + LLM scraping
 │   ├── schemas.py                # Pydantic models
-│   ├── seed.py                   # Dummy data seeder
-│   ├── test_main.py              # pytest suite (8 tests)
+│   ├── seed.py                   # Dummy data seeder (12 job postings)
 │   └── requirements.txt
-└── .agents/                      # AI coding agent skills (Supabase)
+└── .agents/                      # AI coding agent skills
 ```
 
 ## Getting Started
@@ -65,8 +87,9 @@ Supabase (Postgres + Auth)
 ### Prerequisites
 
 - Python 3.13+
-- Node.js 20+ / Bun
+- Node.js 20+ / Bun / pnpm
 - Supabase account (already configured)
+- OpenAI API key (for LLM scraping)
 
 ### Backend Setup
 
@@ -96,6 +119,23 @@ bun install
 bun run dev
 ```
 
+### Extension Setup
+
+```bash
+cd sync-role-extension
+
+# Install dependencies
+pnpm install
+
+# Start dev server (hot-reload)
+pnpm dev
+
+# Production build
+pnpm build
+```
+
+Load the `build/chrome-mv3-dev` or `build/chrome-mv3-prod` directory as an unpacked extension in Chrome.
+
 ## API Endpoints
 
 | Method | Path | Description |
@@ -105,17 +145,22 @@ bun run dev
 | POST | `/api/v1/jobs` | Create a job |
 | PATCH | `/api/v1/jobs/{id}` | Update a job |
 | DELETE | `/api/v1/jobs/{id}` | Delete a job |
+| POST | `/api/v1/scrape` | Extract job data from page text via GPT-4o-mini |
 
 ## Database Schema
 
 ```sql
 job_postings
-├── id          UUID PRIMARY KEY
-├── title       TEXT NOT NULL
-├── company     TEXT NOT NULL
-├── source_url  TEXT DEFAULT ''
-├── status      TEXT CHECK IN ('saved','applied','interviewing','rejected','offer')
-├── location    TEXT DEFAULT ''
-├── salary      TEXT DEFAULT ''
-└── created_at  TIMESTAMPTZ DEFAULT now()
+├── id              UUID PRIMARY KEY
+├── title           TEXT NOT NULL
+├── company         TEXT NOT NULL
+├── source_url      TEXT DEFAULT ''
+├── status          TEXT CHECK IN ('saved','applied','interviewing','rejected','offer')
+├── location        TEXT DEFAULT ''
+├── salary          TEXT DEFAULT ''
+├── description     TEXT DEFAULT ''
+├── recruiter_name  TEXT DEFAULT ''
+├── published_at    TEXT DEFAULT ''
+├── employment_type TEXT DEFAULT ''
+└── created_at      TIMESTAMPTZ DEFAULT now()
 ```
