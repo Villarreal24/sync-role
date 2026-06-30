@@ -4,15 +4,16 @@ A full-stack job application tracker with a Kanban board interface and a browser
 
 ## Project Overview
 
-ApplySync helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The **browser extension** (Chrome MV3) detects job postings on LinkedIn, Indeed, Glassdoor, and other sites, uses GPT-4o-mini to extract structured data, and saves it directly to the tracker with a single click.
+ApplySync helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The **browser extension** (Chrome MV3) works on **any job board** (LinkedIn, Indeed, Greenhouse, etc.) — it sends the page text to GPT-4o-mini for structured data extraction and saves directly to the tracker with a single click. If scraping fails on an unrecognized site, the form falls back to manual entry with fields pre-filled from the page URL.
 
 ## Architecture
 
 ```
                     ┌──────────────────────────────────────┐
                     │  sync-role-extension (Chrome MV3)     │
-                    │  • Detects job pages via URL patterns │
+                    │  • Works on any HTTPS job board       │
                     │  • Scrapes page text → LLM extraction │
+                    │  • Falls back to manual entry         │
                     │  • Saves directly to backend           │
                     └──────────┬───────────────────────────┘
                                │ POST /api/v1/scrape
@@ -43,7 +44,7 @@ React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py �
 ```
 ├── .env                          # Backend credentials (gitignored)
 ├── .gitignore
-├── Makefile                      # Dev commands (install, run, test)
+├── Makefile                      # Dev commands (install, run, dev, test)
 ├── docs/
 │   ├── SDD.md                    # Software Design Document (backend + web)
 │   └── EXTENSION-SDD.md          # Software Design Document (extension)
@@ -68,10 +69,9 @@ React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py �
 │   ├── src/
 │   │   ├── popup.tsx             # Extension popup UI
 │   │   ├── background.ts         # Service worker (badge management)
-│   │   ├── content.ts            # Content script (job page detection)
-│   │   ├── contents/overlay.tsx  # Floating panel overlay (scrape + save)
-│   │   ├── components/           # FloatingPanel, LoadingSpinner
-│   │   └── lib/                  # API client, types, styles, constants, URL transforms
+│   │   ├── content.ts            # Content script (injects overlay)
+│   │   ├── components/           # FloatingPanel, LoadingSpinner, OverlayPanel
+│   │   └── lib/                  # API client, types, styles, popup-styles, constants, URL transforms
 │   └── package.json
 ├── syncRoleBackend/              # FastAPI backend
 │   ├── config.py                 # pydantic-settings (env loader)
@@ -91,50 +91,40 @@ React 19 + TanStack Start ──→ REST API (port 8000) ──→ supabase-py �
 - Supabase account (already configured)
 - OpenAI API key (for LLM scraping)
 
-### Backend Setup
+### All-in-One (recommended)
 
 ```bash
-# Install dependencies
-make install
-
-# Start the server (port 8000, hot-reload enabled)
-make run
-
-# Run tests
-make test
+# Starts backend (:8000) + frontend (:3000) + extension dev server
+# Ctrl+C stops all three services
+make dev
 ```
 
-### Frontend Setup
+### Individual Services
 
+**Backend:**
+```bash
+make install   # Install Python dependencies
+make run       # Start server on port 8000 (hot-reload)
+make test      # Run pytest
+```
+
+**Frontend:**
 ```bash
 cd sync-role
-
-# Install dependencies
-bun install
-
-# Start dev server (port 3000)
-bun run dev
+bun install    # Install JS dependencies
+bun run dev    # Start dev server on port 3000
 ```
 
-### Extension Setup
-
+**Extension:**
 ```bash
 cd sync-role-extension
-
-# Install dependencies
-pnpm install
-
-# Start dev server (hot-reload)
-pnpm dev
-
-# Run tests
-pnpm test
-
-# Production build
-pnpm build
+pnpm install   # Install JS dependencies
+pnpm dev       # Start dev server (hot-reload)
+pnpm test      # Run Vitest
+pnpm build     # Production build
 ```
 
-Load the `build/chrome-mv3-dev` or `build/chrome-mv3-prod` directory as an unpacked extension in Chrome.
+Load the `build/chrome-mv3-prod` directory as an unpacked extension in Chrome (`chrome://extensions` → Load unpacked).
 
 ## API Endpoints
 

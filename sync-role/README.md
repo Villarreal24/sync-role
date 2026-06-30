@@ -57,7 +57,7 @@ src/
 
 ## Data Source
 
-Jobs are created via the **ApplySync browser extension** (Chrome MV3) which scrapes job postings from LinkedIn, Indeed, Glassdoor, and other sites using GPT-4o-mini extraction. They can also be created manually via the API.
+Jobs are created via the **ApplySync browser extension** (Chrome MV3) which scrapes job postings from LinkedIn, Indeed, Greenhouse, and any other job board using GPT-4o-mini extraction, with fallback to manual entry. They can also be created manually via the API.
 
 ## Backend
 
