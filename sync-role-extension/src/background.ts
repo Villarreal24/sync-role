@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     chrome.action.setBadgeBackgroundColor({ color: "#3b82f6" })
   }
 
-  if (message.type === "JOB_SAVED") {
+  if (message.type === "JOB_SAVED" || message.type === "OVERLAY_SAVED") {
     chrome.action.setBadgeText({ text: "" })
   }
 })

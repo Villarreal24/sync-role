@@ -2,23 +2,25 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 VALID_STATUSES = frozenset({"saved", "applied", "interviewing", "rejected", "offer"})
 
 
 class JobPostingCreate(BaseModel):
+    model_config = {"populate_by_name": True}
+
     title: str
     company: str
-    source_url: str = ""
+    source_url: str = Field("", alias="sourceUrl")
     status: str = "saved"
     location: str = ""
     salary: str = ""
     description: str = ""
-    recruiter_name: str = ""
-    published_at: str = ""
-    employment_type: str = ""
+    recruiter_name: str = Field("", alias="recruiterName")
+    published_at: str = Field("", alias="publishedAt")
+    employment_type: str = Field("", alias="employmentType")
 
     def model_dump_db(self) -> dict:
         raw = self.model_dump()
@@ -28,16 +30,18 @@ class JobPostingCreate(BaseModel):
 
 
 class JobPostingUpdate(BaseModel):
+    model_config = {"populate_by_name": True}
+
     title: Optional[str] = None
     company: Optional[str] = None
-    source_url: Optional[str] = None
+    source_url: Optional[str] = Field(None, alias="sourceUrl")
     status: Optional[str] = None
     location: Optional[str] = None
     salary: Optional[str] = None
     description: Optional[str] = None
-    recruiter_name: Optional[str] = None
-    published_at: Optional[str] = None
-    employment_type: Optional[str] = None
+    recruiter_name: Optional[str] = Field(None, alias="recruiterName")
+    published_at: Optional[str] = Field(None, alias="publishedAt")
+    employment_type: Optional[str] = Field(None, alias="employmentType")
 
 
 class JobPostingResponse(BaseModel):

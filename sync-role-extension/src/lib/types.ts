@@ -44,6 +44,7 @@ export type PopupState =
 export interface FormState {
   title: string
   company: string
+  sourceUrl: string
   location: string
   salary: string
   description: string
@@ -53,9 +54,13 @@ export interface FormState {
   requiredError: string
 }
 
+export interface OverlayState {
+  visible: boolean
+}
+
 export interface ExtensionMessage {
-  type: "PAGE_HAS_JOB" | "GET_PAGE_CONTENT" | "PAGE_CONTENT" | "JOB_SAVED"
-  payload?: PageContent
+  type: "PAGE_HAS_JOB" | "GET_PAGE_CONTENT" | "PAGE_CONTENT" | "JOB_SAVED" | "SHOW_OVERLAY" | "HIDE_OVERLAY" | "OVERLAY_SAVED" | "GET_OVERLAY_STATE"
+  payload?: PageContent | OverlayState
 }
 
 export const JOB_SITE_PATTERNS = [
