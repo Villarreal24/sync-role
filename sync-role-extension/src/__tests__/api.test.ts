@@ -5,9 +5,23 @@ import type { JobPostingPayload } from "../lib/types"
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
+// Mock chrome.storage.local for auth token lookup
+const mockStorage = {
+  get: vi.fn(),
+}
+
+vi.stubGlobal("chrome", {
+  storage: {
+    local: mockStorage,
+  },
+})
+
 describe("createJob", () => {
   beforeEach(() => {
     mockFetch.mockReset()
+    mockStorage.get.mockReset()
+    // Return no stored token so requests are unauthenticated
+    mockStorage.get.mockResolvedValue({})
   })
 
   it("should send correct camelCase body with all fields", async () => {
