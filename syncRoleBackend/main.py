@@ -2,7 +2,7 @@ import json as _json
 from datetime import date as _date
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from supabase import Client
@@ -10,6 +10,7 @@ from supabase import Client
 from syncRoleBackend.auth.middleware import AuthMiddleware
 from syncRoleBackend.auth.router import router as auth_router
 from syncRoleBackend.config import settings
+from syncRoleBackend.profiles.router import router as profiles_router
 from syncRoleBackend.database import get_supabase
 from syncRoleBackend.schemas import (
     JobPostingCreate,
@@ -47,6 +48,9 @@ app.add_middleware(
 # Mount auth routes
 app.include_router(auth_router)
 
+# Mount profiles routes
+app.include_router(profiles_router)
+
 
 def _db() -> Client:
     return get_supabase()
@@ -65,7 +69,7 @@ async def root():
 
 
 @app.get("/api/v1/jobs", response_model=List[JobPostingResponse])
-async def get_jobs():
+async def get_jobs(request: Request):
     result = (
         _db()
         .table("job_postings")
@@ -77,9 +81,10 @@ async def get_jobs():
 
 
 @app.post("/api/v1/jobs", response_model=JobPostingResponse)
-async def create_job(job: JobPostingCreate):
+async def create_job(job: JobPostingCreate, request: Request):
     payload = job.model_dump_db()
     payload["id"] = _new_id()
+    payload["user_id"] = request.state.user_id
     payload["created_at"] = _now_iso()
 
     result = _db().table("job_postings").insert(payload).execute()

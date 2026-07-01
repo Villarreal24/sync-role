@@ -24,6 +24,7 @@ class JobPostingCreate(BaseModel):
     work_mode: str = Field("", alias="workMode")
     seniority: str = ""
     technologies: list[str] = Field(default_factory=list)
+    user_id: str | None = None
 
     def model_dump_db(self) -> dict:
         raw = self.model_dump()
@@ -57,6 +58,7 @@ class JobPostingResponse(BaseModel):
     sourceUrl: str
     status: str
     createdAt: str
+    userId: str | None = Field(None, alias="userId")
     location: str
     salary: str
     description: str
@@ -80,6 +82,7 @@ class JobPostingResponse(BaseModel):
                 if isinstance(row["created_at"], datetime)
                 else str(row["created_at"])
             ),
+            userId=row.get("user_id"),
             location=row.get("location", ""),
             salary=row.get("salary", ""),
             description=row.get("description", ""),
