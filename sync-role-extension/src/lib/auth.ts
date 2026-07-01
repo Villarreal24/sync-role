@@ -78,32 +78,6 @@ export async function refreshStoredToken(): Promise<string | null> {
   }
 }
 
-// --- Session exchange (cookie → Bearer) ---
-
-export async function exchangeCookieForToken(): Promise<string | null> {
-  // Try to get Supabase session cookie from the backend domain
-  const backendUrl = new URL(BACKEND_URL)
-  try {
-    const cookies = await chrome.cookies.getAll({ url: backendUrl.origin })
-    const sbCookie = cookies.find(
-      (c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token")
-    )
-    if (!sbCookie) return null
-
-    // The cookie contains a session JSON — send it to the backend
-    const res = await fetch(`${BACKEND_URL}/auth/session`, {
-      method: "GET",
-      credentials: "include",
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    await setStoredTokens(data.access_token, data.refresh_token)
-    return data.access_token
-  } catch {
-    return null
-  }
-}
-
 // --- Auth header helper ---
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -111,10 +85,6 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 
   if (token && isTokenExpired(token)) {
     token = await refreshStoredToken()
-  }
-
-  if (!token) {
-    token = await exchangeCookieForToken()
   }
 
   if (token) {

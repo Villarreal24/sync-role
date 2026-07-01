@@ -52,10 +52,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: (token, refreshToken, user) => {
     set({ token, refreshToken, user, isAuthenticated: true })
-    setCookie('syncrole_token', token, 3600)       // access_token: 1h
-    setCookie('syncrole_refresh', refreshToken, 604800) // refresh_token: 7d
+    setCookie('syncrole_token', token, 3600) // access_token: 1h
+    setCookie('syncrole_refresh', refreshToken, 2592000) // refresh_token: 30d
     setCookie('syncrole_uid', user.id, 604800)
     setCookie('syncrole_email', user.email, 604800)
+
+    // Notify the extension (content script) so it stores tokens
+    window.postMessage(
+      {
+        type: 'SYNCROLE_AUTH',
+        access_token: token,
+        refresh_token: refreshToken,
+        user: { id: user.id, email: user.email },
+      },
+      window.location.origin,
+    )
   },
 
   clearAuth: () => {

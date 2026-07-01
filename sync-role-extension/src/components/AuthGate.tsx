@@ -3,7 +3,6 @@ import {
   getStoredToken,
   isTokenExpired,
   refreshStoredToken,
-  exchangeCookieForToken,
 } from "../lib/auth"
 
 type AuthState = "loading" | "authenticated" | "unauthenticated"
@@ -30,10 +29,6 @@ export function AuthGate({
 
         if (token && isTokenExpired(token)) {
           token = await refreshStoredToken()
-        }
-
-        if (!token) {
-          token = await exchangeCookieForToken()
         }
 
         if (!cancelled) {
