@@ -31,7 +31,7 @@ dev: install install-fe install-ext
 		wait)
 
 test: install
-	$(PYTHON) -m pytest syncRoleBackend/test_main.py -v
+	$(PYTHON) -m pytest syncRoleBackend/ -v
 
 clean:
 	rm -rf .venv __pycache__ .pytest_cache sync-role/node_modules sync-role-extension/node_modules
