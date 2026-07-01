@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from supabase import Client
 
+from syncRoleBackend.auth.middleware import AuthMiddleware
+from syncRoleBackend.auth.router import router as auth_router
 from syncRoleBackend.config import settings
 from syncRoleBackend.database import get_supabase
 from syncRoleBackend.schemas import (
@@ -30,17 +32,31 @@ def _get_openai() -> OpenAI:
         _openai = OpenAI(api_key=settings.openai_api_key)
     return _openai
 
+
+# Auth middleware first (before CORS so 401 responses include CORS headers)
+app.add_middleware(AuthMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", settings.frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Mount auth routes
+app.include_router(auth_router)
+
 
 def _db() -> Client:
     return get_supabase()
+
+
+def _db_for_user(user_id: str | None) -> Client:
+    """Get a supabase client scoped to the user's JWT for RLS enforcement."""
+    if user_id:
+        return get_supabase(user_id)  # Use user JWT to enforce RLS
+    return get_supabase()  # Fall back to anon client
 
 
 @app.get("/")
