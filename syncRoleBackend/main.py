@@ -39,7 +39,7 @@ app.add_middleware(AuthMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", settings.frontend_url],
+    allow_origins=["http://localhost:3000", settings.frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,15 +52,15 @@ app.include_router(auth_router)
 app.include_router(profiles_router)
 
 
-def _db() -> Client:
-    return get_supabase()
+def _db_for_user(token: str | None) -> Client:
+    """Get a supabase client scoped to the user's JWT for RLS enforcement.
 
-
-def _db_for_user(user_id: str | None) -> Client:
-    """Get a supabase client scoped to the user's JWT for RLS enforcement."""
-    if user_id:
-        return get_supabase(user_id)  # Use user JWT to enforce RLS
-    return get_supabase()  # Fall back to anon client
+    Pass the raw JWT token so supabase-py uses it as the apikey,
+    enabling RLS auth.uid() to resolve to the authenticated user.
+    """
+    if token:
+        return get_supabase(token)
+    return get_supabase()  # anon client (RLS will block for non-auth'd queries)
 
 
 @app.get("/")
@@ -71,7 +71,7 @@ async def root():
 @app.get("/api/v1/jobs", response_model=List[JobPostingResponse])
 async def get_jobs(request: Request):
     result = (
-        _db()
+        _db_for_user(request.state.token)
         .table("job_postings")
         .select("*")
         .order("created_at", desc=True)
@@ -87,18 +87,18 @@ async def create_job(job: JobPostingCreate, request: Request):
     payload["user_id"] = request.state.user_id
     payload["created_at"] = _now_iso()
 
-    result = _db().table("job_postings").insert(payload).execute()
+    result = _db_for_user(request.state.token).table("job_postings").insert(payload).execute()
     return JobPostingResponse.from_db_row(result.data[0])
 
 
 @app.patch("/api/v1/jobs/{job_id}", response_model=JobPostingResponse)
-async def update_job(job_id: str, job_update: JobPostingUpdate):
+async def update_job(job_id: str, job_update: JobPostingUpdate, request: Request):
     update_data = job_update.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     result = (
-        _db()
+        _db_for_user(request.state.token)
         .table("job_postings")
         .update(update_data)
         .eq("id", job_id)
@@ -216,8 +216,8 @@ async def scrape_job(req: ScrapeRequest):
 
 
 @app.delete("/api/v1/jobs/{job_id}")
-async def delete_job(job_id: str):
-    result = _db().table("job_postings").delete().eq("id", job_id).execute()
+async def delete_job(job_id: str, request: Request):
+    result = _db_for_user(request.state.token).table("job_postings").delete().eq("id", job_id).execute()
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")

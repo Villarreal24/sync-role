@@ -11,7 +11,7 @@ interface AuthResponse {
 }
 
 export function useAuth() {
-  const { token, refreshToken, user, isAuthenticated, setAuth, clearAuth, setToken } =
+  const { token, refreshToken, user, isAuthenticated, setAuth, clearAuth } =
     useAuthStore()
   const navigate = useNavigate()
 

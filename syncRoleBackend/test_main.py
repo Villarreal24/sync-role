@@ -41,9 +41,69 @@ _AUTH_HEADER = {"Authorization": f"Bearer {_token}"}
 def _patch_settings():
     with (
         patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-        patch.object(settings, "supabase_anon_key", settings.supabase_service_role_key),
+        patch("syncRoleBackend.main.get_supabase") as mock_get_sb,
     ):
+        mock_sb = _mock_supabase()
+        mock_get_sb.return_value = mock_sb
         yield
+
+
+def _mock_supabase():
+    """Return a mock supabase client that captures inserts for test assertions."""
+    from unittest.mock import MagicMock
+
+    _inserted_rows: list[dict] = []
+
+    def _insert(payload):
+        _inserted_rows.append(payload)
+        result = MagicMock()
+        result.data = [payload]
+        return MagicMock(execute=lambda: result)
+
+    def _select(*args, **kwargs):
+        result = MagicMock()
+        result.data = _inserted_rows
+        return MagicMock(
+            order=lambda *a, **kw: MagicMock(
+                execute=lambda: MagicMock(data=_inserted_rows)
+            ),
+            execute=lambda: MagicMock(data=_inserted_rows),
+        )
+
+    def _update(updates):
+        if _inserted_rows:
+            for row in _inserted_rows:
+                row.update(updates)
+            result = MagicMock()
+            result.data = [_inserted_rows[-1]]
+            return MagicMock(eq=lambda fid, fv: MagicMock(execute=lambda: result))
+        result = MagicMock()
+        result.data = []
+        return MagicMock(eq=lambda fid, fv: MagicMock(execute=lambda: result))
+
+    def _delete():
+        if _inserted_rows:
+            result = MagicMock()
+            result.data = [_inserted_rows.pop()]
+            return MagicMock(eq=lambda fid, fv: MagicMock(execute=lambda: result))
+        result = MagicMock()
+        result.data = []
+        return MagicMock(eq=lambda fid, fv: MagicMock(execute=lambda: result))
+
+    mock_sb = MagicMock()
+    mock_sb.table.return_value = MagicMock(
+        insert=_insert,
+        select=_select,
+        update=_update,
+        delete=_delete,
+        order=lambda *a, **kw: MagicMock(execute=lambda: MagicMock(data=_inserted_rows)),
+        eq=lambda fid, fv: MagicMock(
+            execute=lambda: MagicMock(data=[r for r in _inserted_rows if r.get("id") == fv])
+            if fid == "id"
+            else MagicMock(data=[])
+        ),
+    )
+    return mock_sb
 
 
 def test_health_check():

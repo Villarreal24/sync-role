@@ -1,4 +1,4 @@
-const FRONTEND_URL = process.env.PLASMO_PUBLIC_FRONTEND_URL || "http://localhost:5173"
+const FRONTEND_URL = process.env.PLASMO_PUBLIC_FRONTEND_URL || "http://localhost:3000"
 
 export function SignInButton() {
   const handleSignIn = () => {

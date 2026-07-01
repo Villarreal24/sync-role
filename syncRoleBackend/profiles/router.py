@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1/profiles", tags=["profiles"])
 @router.get("/me", response_model=ProfileResponse)
 async def get_profile(request: Request, user_id: str = Depends(get_current_user)):
     """Get the authenticated user's profile."""
-    sb = get_supabase(user_id)
+    sb = get_supabase(request.state.token)
     result = sb.table("profiles").select("*").eq("id", user_id).execute()
 
     if not result.data:
@@ -29,7 +29,7 @@ async def update_profile(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    sb = get_supabase(user_id)
+    sb = get_supabase(request.state.token)
     result = (
         sb.table("profiles")
         .update(update_data)

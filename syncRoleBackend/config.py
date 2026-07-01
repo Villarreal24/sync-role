@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
     supabase_encryption_key: str = ""
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:3000"
+    backend_url: str = "http://localhost:8000"
     openai_api_key: str = ""
 
 

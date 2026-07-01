@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
 import { useAuth } from '../hooks/use-auth'
+import { useAuthStore } from '../store/auth.store'
 
 const API_BASE = 'http://localhost:8000/api/v1'
 
@@ -9,6 +11,23 @@ export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [oauthLoading, setOauthLoading] = useState(false)
   const { register, login } = useAuth()
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const navigate = useNavigate()
+
+  // Handle OAuth redirect with tokens in URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const accessToken = params.get('access_token')
+    if (accessToken) {
+      const refreshToken = params.get('refresh_token') ?? ''
+      const userId = params.get('user_id') ?? ''
+      const email = params.get('email') ?? ''
+      setAuth(accessToken, refreshToken, { id: userId, email })
+      // Clean URL params and redirect to home
+      window.history.replaceState({}, '', '/auth')
+      navigate({ to: '/' })
+    }
+  }, [setAuth, navigate])
 
   const handleGoogleOAuth = useCallback(async () => {
     setOauthLoading(true)

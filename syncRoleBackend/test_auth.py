@@ -355,18 +355,23 @@ class TestDualClient:
             assert key == "test-sr-key"
 
     def test_get_supabase_with_user_jwt(self):
-        """get_supabase(user_jwt) returns anon client with user JWT as apikey."""
+        """get_supabase(user_jwt) creates anon client + sets JWT auth header for RLS."""
         from syncRoleBackend.database import get_supabase, _clients
+        from syncRoleBackend.config import settings
 
         _clients.clear()
 
         user_jwt = _make_token()
         with patch("syncRoleBackend.database.create_client") as mock_create:
-            mock_create.return_value = MagicMock()
+            mock_client = MagicMock()
+            mock_create.return_value = mock_client
             get_supabase(user_jwt)
+            # Should create client with ANON key, not the user JWT
             mock_create.assert_called_once()
             _url, key = mock_create.call_args[0]
-            assert key == user_jwt
+            assert key == settings.supabase_anon_key
+            # Should set the user JWT on the postgrest auth header
+            mock_client.postgrest.auth.assert_called_once_with(user_jwt)
 
     def test_get_supabase_caches_clients(self):
         """Same cache_key returns cached client."""

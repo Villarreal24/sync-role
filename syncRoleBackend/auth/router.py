@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.responses import RedirectResponse
 
 from syncRoleBackend.auth.dependencies import get_current_user
 from syncRoleBackend.auth.schemas import (
@@ -89,18 +90,57 @@ async def refresh(body: AuthRefreshRequest):
 
 @router.get("/google")
 async def google_login():
-    """Initiate Google OAuth flow. Returns the redirect URL."""
+    """Initiate Google OAuth flow. Returns the redirect URL.
+
+    After Google auth, Supabase redirects to our callback endpoint
+    with an authorization code. The callback exchanges it for a session.
+    """
     sb = get_supabase()
     try:
         result = sb.auth.sign_in_with_oauth(
             {
                 "provider": "google",
-                "options": {"redirect_to": f"{settings.frontend_url}/auth"},
+                "options": {
+                    "redirect_to": f"{settings.backend_url}/api/v1/auth/google/callback"
+                },
             }
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e) or "OAuth initiation failed")
     return {"url": result.url}
+
+
+@router.get("/google/callback")
+async def google_callback(code: str):
+    """Exchange OAuth PKCE code for a session using supabase-py.
+
+    Called by Supabase after Google OAuth completes. The same supabase
+    client instance (cached globally) retains the PKCE code_verifier
+    from the OAuth URL generation, enabling the code exchange.
+    """
+    sb = get_supabase()
+    try:
+        result = sb.auth.exchange_code_for_session({
+            "auth_code": code,
+            "redirect_to": f"{settings.backend_url}/api/v1/auth/google/callback",
+        })
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Token exchange failed: {e}",
+        )
+
+    if not result or not result.session:
+        raise HTTPException(status_code=502, detail="Token exchange returned no session")
+
+    redirect_url = (
+        f"{settings.frontend_url}/auth"
+        f"?access_token={result.session.access_token}"
+        f"&refresh_token={result.session.refresh_token}"
+        f"&user_id={result.user.id}"
+        f"&email={result.user.email}"
+    )
+    return RedirectResponse(url=redirect_url)
 
 
 @router.get("/session", response_model=AuthResponse)

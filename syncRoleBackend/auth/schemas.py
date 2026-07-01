@@ -28,3 +28,7 @@ class AuthResponse(BaseModel):
 
 class AuthMessageResponse(BaseModel):
     message: str
+
+
+class GoogleCallbackRequest(BaseModel):
+    code: str
