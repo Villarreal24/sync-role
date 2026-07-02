@@ -255,16 +255,152 @@ def test_jobs_without_auth_returns_401():
     assert resp.status_code == 401
 
 
-def test_scrape_no_openai_key():
-    """Without OPENAI_API_KEY set, scrape should return 501."""
+def test_scrape_success_gemini():
+    """Verify scrape endpoint uses Gemini provider successfully when mocked."""
+    mock_json = (
+        '{"title": "Gemini Engineer", "company": "Google", "source_url": "", '
+        '"location": "Remote", "work_mode": "Remote", "employment_type": "Full-time", '
+        '"salary": "$120k", "technologies": ["Python"], "seniority": "Senior", '
+        '"description": "Great job", "recruiter_name": "", "published_at": ""}'
+    )
+    with (
+        patch.object(settings, "llm_provider", "gemini"),
+        patch.object(settings, "gemini_api_key", "test-gemini-key"),
+        patch("syncRoleBackend.main._call_llm", return_value=mock_json) as mock_call,
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Gemini Engineer"
+        assert data["company"] == "Google"
+        mock_call.assert_called_once()
+
+
+def test_scrape_success_openai():
+    """Verify scrape endpoint uses OpenAI provider successfully when mocked."""
+    mock_json = (
+        '{"title": "OpenAI Engineer", "company": "Microsoft", "source_url": "", '
+        '"location": "Remote", "work_mode": "Remote", "employment_type": "Full-time", '
+        '"salary": "$150k", "technologies": ["Python"], "seniority": "Senior", '
+        '"description": "Awesome job", "recruiter_name": "", "published_at": ""}'
+    )
+    with (
+        patch.object(settings, "llm_provider", "openai"),
+        patch.object(settings, "openai_api_key", "test-openai-key"),
+        patch("syncRoleBackend.main._call_llm", return_value=mock_json) as mock_call,
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "OpenAI Engineer"
+        assert data["company"] == "Microsoft"
+        mock_call.assert_called_once()
+
+
+def test_scrape_success_groq():
+    """Verify scrape endpoint uses Groq provider successfully when mocked."""
+    mock_json = (
+        '{"title": "Groq Engineer", "company": "Groq Inc", "source_url": "", '
+        '"location": "Remote", "work_mode": "Remote", "employment_type": "Full-time", '
+        '"salary": "$100k", "technologies": ["Python"], "seniority": "Senior", '
+        '"description": "Fast job", "recruiter_name": "", "published_at": ""}'
+    )
+    with (
+        patch.object(settings, "llm_provider", "groq"),
+        patch.object(settings, "groq_api_key", "test-groq-key"),
+        patch("syncRoleBackend.main._call_llm", return_value=mock_json) as mock_call,
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Groq Engineer"
+        assert data["company"] == "Groq Inc"
+        mock_call.assert_called_once()
+
+
+def test_scrape_groq_missing_key():
+    """Without GROQ_API_KEY set and provider=groq, scrape should return 501."""
+    with (
+        patch.object(settings, "llm_provider", "groq"),
+        patch.object(settings, "groq_api_key", ""),
+        patch("syncRoleBackend.main._llm_client", None),
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 501
+        assert "GROQ_API_KEY is not configured" in resp.json()["detail"]
+
+
+def test_scrape_gemini_missing_key():
+    """Without GEMINI_API_KEY set and provider=gemini, scrape should return 501."""
+    with (
+        patch.object(settings, "llm_provider", "gemini"),
+        patch.object(settings, "gemini_api_key", ""),
+        patch("syncRoleBackend.main._llm_client", None),
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 501
+        assert "GEMINI_API_KEY is not configured" in resp.json()["detail"]
+
+
+def test_scrape_openai_missing_key():
+    """Without OPENAI_API_KEY set and provider=openai, scrape should return 501."""
+    with (
+        patch.object(settings, "llm_provider", "openai"),
+        patch.object(settings, "openai_api_key", ""),
+        patch("syncRoleBackend.main._llm_client", None),
+    ):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
+        assert resp.status_code == 501
+        assert "OPENAI_API_KEY is not configured" in resp.json()["detail"]
+
+
+def test_scrape_missing_key():
+    """Without the active provider's API key set, scrape should return 501."""
     if settings.openai_api_key:
         pytest.skip("OPENAI_API_KEY is set — scrape would succeed, not return 501")
-    resp = client.post(
-        "/api/v1/scrape",
-        json={
-            "url": "https://example.com/job",
-            "page_content": "Some job page content",
-        },
-    )
+    with patch("syncRoleBackend.main._llm_client", None):
+        resp = client.post(
+            "/api/v1/scrape",
+            json={
+                "url": "https://example.com/job",
+                "page_content": "Some job page content",
+            },
+        )
     assert resp.status_code == 501
-    assert "OpenAI not configured" in resp.json()["detail"]
+    assert "not configured" in resp.json()["detail"]

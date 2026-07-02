@@ -1,10 +1,11 @@
 import json as _json
+import time as _time
 from datetime import date as _date
 from typing import List
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from supabase import Client
 
 from syncRoleBackend.auth.middleware import AuthMiddleware
@@ -24,14 +25,41 @@ from syncRoleBackend.schemas import (
 
 app = FastAPI(title="ApplySync API", version="1.0.0")
 
-_openai: OpenAI | None = None
+_llm_client: OpenAI | None = None
+
+print(f"  [LLM]  Provider={settings.llm_provider!r}, "
+      f"Gemini={settings.gemini_model!r}, "
+      f"OpenAI={settings.openai_model!r}, "
+      f"Groq={settings.groq_model!r}")
 
 
-def _get_openai() -> OpenAI:
-    global _openai
-    if _openai is None and settings.openai_api_key:
-        _openai = OpenAI(api_key=settings.openai_api_key)
-    return _openai
+def _get_llm_client() -> OpenAI:
+    global _llm_client
+    if _llm_client is not None:
+        return _llm_client
+
+    if settings.llm_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is not configured in .env")
+        _llm_client = OpenAI(
+            api_key=settings.gemini_api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
+    elif settings.llm_provider == "openai":
+        if not settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is not configured in .env")
+        _llm_client = OpenAI(api_key=settings.openai_api_key)
+    elif settings.llm_provider == "groq":
+        if not settings.groq_api_key:
+            raise ValueError("GROQ_API_KEY is not configured in .env")
+        _llm_client = OpenAI(
+            api_key=settings.groq_api_key,
+            base_url="https://api.groq.com/openai/v1",
+        )
+    else:
+        raise ValueError(f"Unknown LLM provider: {settings.llm_provider}")
+
+    return _llm_client
 
 
 # Auth middleware first (before CORS so 401 responses include CORS headers)
@@ -39,7 +67,7 @@ app.add_middleware(AuthMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", settings.frontend_url],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -142,11 +170,17 @@ REQUIRED JSON STRUCTURE:
 
 
 _RETRY_TOKEN_LIMITS = [2000, 3000, 4000]
+_RETRY_BACKOFF = [1, 3, 6]
 
 
 def _call_llm(client: OpenAI, req: ScrapeRequest, max_tokens: int) -> str:
+    model = {
+        "gemini": settings.gemini_model,
+        "openai": settings.openai_model,
+        "groq": settings.groq_model,
+    }.get(settings.llm_provider, settings.openai_model)
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[
             {"role": "system", "content": SCRAPE_SYSTEM_PROMPT},
             {
@@ -176,42 +210,63 @@ _RETRY_EXHAUSTED_MSG = (
 
 
 @app.post("/api/v1/scrape", response_model=ScrapeResponse)
-async def scrape_job(req: ScrapeRequest):
-    client = _get_openai()
-    if not client:
+async def scrape_job(req: ScrapeRequest, request: Request):
+    print(f"  [SCRAPE] POST /api/v1/scrape — url={req.url[:80]!r}, "
+          f"page_content_len={len(req.page_content)}, "
+          f"origin={request.headers.get('origin', 'none')!r}, "
+          f"provider={settings.llm_provider!r}")
+
+    try:
+        client = _get_llm_client()
+    except ValueError as e:
+        print(f"  [SCRAPE] Config error: {e}")
         raise HTTPException(
             status_code=501,
-            detail="OpenAI not configured. Set OPENAI_API_KEY in .env",
+            detail=str(e),
         )
 
     last_error = None
     for max_tokens in _RETRY_TOKEN_LIMITS:
-        try:
-            raw = _call_llm(client, req, max_tokens)
-            data = _extract_data(raw)
-        except _json.JSONDecodeError:
-            last_error = _RETRY_EXHAUSTED_MSG
-            continue
-        except Exception as e:
-            raise HTTPException(
-                status_code=502, detail=f"LLM call failed: {str(e)}"
-            )
+        for attempt, backoff in enumerate(_RETRY_BACKOFF):
+            try:
+                raw = _call_llm(client, req, max_tokens)
+                data = _extract_data(raw)
+            except _json.JSONDecodeError:
+                print(f"  [SCRAPE] JSON decode error with max_tokens={max_tokens}, retrying...")
+                last_error = _RETRY_EXHAUSTED_MSG
+                break
+            except RateLimitError as e:
+                print(f"  [SCRAPE] Rate limited (attempt {attempt + 1}), "
+                      f"retrying in {backoff}s...")
+                last_error = f"LLM rate limited: {e.response.headers.get('x-ratelimit-remaining', 'N/A')}"
+                if attempt < len(_RETRY_BACKOFF) - 1:
+                    _time.sleep(backoff)
+                    continue
+                break
+            except Exception as e:
+                print(f"  [SCRAPE] LLM call failed: {e}")
+                raise HTTPException(
+                    status_code=502, detail=f"LLM call failed: {str(e)}"
+                )
+            else:
+                print(f"  [SCRAPE] Success — title={data.get('title', '')!r}, "
+                      f"company={data.get('company', '')!r}")
+                return ScrapeResponse(
+                    title=data.get("title", ""),
+                    company=data.get("company", ""),
+                    source_url=req.url,
+                    location=data.get("location", ""),
+                    salary=data.get("salary", ""),
+                    description=data.get("description", ""),
+                    recruiter_name=data.get("recruiter_name", ""),
+                    published_at=data.get("published_at", ""),
+                    employment_type=data.get("employment_type", ""),
+                    work_mode=data.get("work_mode", ""),
+                    seniority=data.get("seniority", ""),
+                    technologies=data.get("technologies", []),
+                )
 
-        return ScrapeResponse(
-            title=data.get("title", ""),
-            company=data.get("company", ""),
-            source_url=req.url,
-            location=data.get("location", ""),
-            salary=data.get("salary", ""),
-            description=data.get("description", ""),
-            recruiter_name=data.get("recruiter_name", ""),
-            published_at=data.get("published_at", ""),
-            employment_type=data.get("employment_type", ""),
-            work_mode=data.get("work_mode", ""),
-            seniority=data.get("seniority", ""),
-            technologies=data.get("technologies", []),
-        )
-
+    print(f"  [SCRAPE] Exhausted all retries: {last_error}")
     raise HTTPException(status_code=502, detail=last_error or _RETRY_EXHAUSTED_MSG)
 
 

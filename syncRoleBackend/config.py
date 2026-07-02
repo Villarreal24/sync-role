@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     backend_url: str = "http://localhost:8000"
     openai_api_key: str = ""
+    gemini_api_key: str = ""
+    groq_api_key: str = ""
+    llm_provider: str = "openai"
+    gemini_model: str = "gemini-2.0-flash-lite"
+    openai_model: str = "gpt-4o-mini"
+    groq_model: str = "llama-3.1-8b-instant"
 
 
 settings = Settings()
