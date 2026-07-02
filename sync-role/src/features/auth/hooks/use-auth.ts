@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '../store/auth.store'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.BACKEND_API_URL
 
 interface AuthResponse {
   access_token: string

@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/features/auth/store/auth.store'
 
-const API_BASE = 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.BACKEND_API_URL
 
 function getAuthHeaders(): Record<string, string> {
   const token = useAuthStore.getState().token
