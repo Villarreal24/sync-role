@@ -1,13 +1,17 @@
 import json as _json
+import time as _time
 from datetime import date as _date
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from supabase import Client
 
+from syncRoleBackend.auth.middleware import AuthMiddleware
+from syncRoleBackend.auth.router import router as auth_router
 from syncRoleBackend.config import settings
+from syncRoleBackend.profiles.router import router as profiles_router
 from syncRoleBackend.database import get_supabase
 from syncRoleBackend.schemas import (
     JobPostingCreate,
@@ -21,14 +25,45 @@ from syncRoleBackend.schemas import (
 
 app = FastAPI(title="ApplySync API", version="1.0.0")
 
-_openai: OpenAI | None = None
+_llm_client: OpenAI | None = None
+
+print(f"  [LLM]  Provider={settings.llm_provider!r}, "
+      f"Gemini={settings.gemini_model!r}, "
+      f"OpenAI={settings.openai_model!r}, "
+      f"Groq={settings.groq_model!r}")
 
 
-def _get_openai() -> OpenAI:
-    global _openai
-    if _openai is None and settings.openai_api_key:
-        _openai = OpenAI(api_key=settings.openai_api_key)
-    return _openai
+def _get_llm_client() -> OpenAI:
+    global _llm_client
+    if _llm_client is not None:
+        return _llm_client
+
+    if settings.llm_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is not configured in .env")
+        _llm_client = OpenAI(
+            api_key=settings.gemini_api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
+    elif settings.llm_provider == "openai":
+        if not settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is not configured in .env")
+        _llm_client = OpenAI(api_key=settings.openai_api_key)
+    elif settings.llm_provider == "groq":
+        if not settings.groq_api_key:
+            raise ValueError("GROQ_API_KEY is not configured in .env")
+        _llm_client = OpenAI(
+            api_key=settings.groq_api_key,
+            base_url="https://api.groq.com/openai/v1",
+        )
+    else:
+        raise ValueError(f"Unknown LLM provider: {settings.llm_provider}")
+
+    return _llm_client
+
+
+# Auth middleware first (before CORS so 401 responses include CORS headers)
+app.add_middleware(AuthMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,9 +73,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount auth routes
+app.include_router(auth_router)
 
-def _db() -> Client:
-    return get_supabase()
+# Mount profiles routes
+app.include_router(profiles_router)
+
+
+def _db_for_user(token: str | None) -> Client:
+    """Get a supabase client scoped to the user's JWT for RLS enforcement.
+
+    Pass the raw JWT token so supabase-py uses it as the apikey,
+    enabling RLS auth.uid() to resolve to the authenticated user.
+    """
+    if token:
+        return get_supabase(token)
+    return get_supabase()  # anon client (RLS will block for non-auth'd queries)
 
 
 @app.get("/")
@@ -49,9 +97,9 @@ async def root():
 
 
 @app.get("/api/v1/jobs", response_model=List[JobPostingResponse])
-async def get_jobs():
+async def get_jobs(request: Request):
     result = (
-        _db()
+        _db_for_user(request.state.token)
         .table("job_postings")
         .select("*")
         .order("created_at", desc=True)
@@ -61,23 +109,24 @@ async def get_jobs():
 
 
 @app.post("/api/v1/jobs", response_model=JobPostingResponse)
-async def create_job(job: JobPostingCreate):
+async def create_job(job: JobPostingCreate, request: Request):
     payload = job.model_dump_db()
     payload["id"] = _new_id()
+    payload["user_id"] = request.state.user_id
     payload["created_at"] = _now_iso()
 
-    result = _db().table("job_postings").insert(payload).execute()
+    result = _db_for_user(request.state.token).table("job_postings").insert(payload).execute()
     return JobPostingResponse.from_db_row(result.data[0])
 
 
 @app.patch("/api/v1/jobs/{job_id}", response_model=JobPostingResponse)
-async def update_job(job_id: str, job_update: JobPostingUpdate):
+async def update_job(job_id: str, job_update: JobPostingUpdate, request: Request):
     update_data = job_update.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     result = (
-        _db()
+        _db_for_user(request.state.token)
         .table("job_postings")
         .update(update_data)
         .eq("id", job_id)
@@ -121,11 +170,17 @@ REQUIRED JSON STRUCTURE:
 
 
 _RETRY_TOKEN_LIMITS = [2000, 3000, 4000]
+_RETRY_BACKOFF = [1, 3, 6]
 
 
 def _call_llm(client: OpenAI, req: ScrapeRequest, max_tokens: int) -> str:
+    model = {
+        "gemini": settings.gemini_model,
+        "openai": settings.openai_model,
+        "groq": settings.groq_model,
+    }.get(settings.llm_provider, settings.openai_model)
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[
             {"role": "system", "content": SCRAPE_SYSTEM_PROMPT},
             {
@@ -155,48 +210,69 @@ _RETRY_EXHAUSTED_MSG = (
 
 
 @app.post("/api/v1/scrape", response_model=ScrapeResponse)
-async def scrape_job(req: ScrapeRequest):
-    client = _get_openai()
-    if not client:
+async def scrape_job(req: ScrapeRequest, request: Request):
+    print(f"  [SCRAPE] POST /api/v1/scrape — url={req.url[:80]!r}, "
+          f"page_content_len={len(req.page_content)}, "
+          f"origin={request.headers.get('origin', 'none')!r}, "
+          f"provider={settings.llm_provider!r}")
+
+    try:
+        client = _get_llm_client()
+    except ValueError as e:
+        print(f"  [SCRAPE] Config error: {e}")
         raise HTTPException(
             status_code=501,
-            detail="OpenAI not configured. Set OPENAI_API_KEY in .env",
+            detail=str(e),
         )
 
     last_error = None
     for max_tokens in _RETRY_TOKEN_LIMITS:
-        try:
-            raw = _call_llm(client, req, max_tokens)
-            data = _extract_data(raw)
-        except _json.JSONDecodeError:
-            last_error = _RETRY_EXHAUSTED_MSG
-            continue
-        except Exception as e:
-            raise HTTPException(
-                status_code=502, detail=f"LLM call failed: {str(e)}"
-            )
+        for attempt, backoff in enumerate(_RETRY_BACKOFF):
+            try:
+                raw = _call_llm(client, req, max_tokens)
+                data = _extract_data(raw)
+            except _json.JSONDecodeError:
+                print(f"  [SCRAPE] JSON decode error with max_tokens={max_tokens}, retrying...")
+                last_error = _RETRY_EXHAUSTED_MSG
+                break
+            except RateLimitError as e:
+                print(f"  [SCRAPE] Rate limited (attempt {attempt + 1}), "
+                      f"retrying in {backoff}s...")
+                last_error = f"LLM rate limited: {e.response.headers.get('x-ratelimit-remaining', 'N/A')}"
+                if attempt < len(_RETRY_BACKOFF) - 1:
+                    _time.sleep(backoff)
+                    continue
+                break
+            except Exception as e:
+                print(f"  [SCRAPE] LLM call failed: {e}")
+                raise HTTPException(
+                    status_code=502, detail=f"LLM call failed: {str(e)}"
+                )
+            else:
+                print(f"  [SCRAPE] Success — title={data.get('title', '')!r}, "
+                      f"company={data.get('company', '')!r}")
+                return ScrapeResponse(
+                    title=data.get("title", ""),
+                    company=data.get("company", ""),
+                    source_url=req.url,
+                    location=data.get("location", ""),
+                    salary=data.get("salary", ""),
+                    description=data.get("description", ""),
+                    recruiter_name=data.get("recruiter_name", ""),
+                    published_at=data.get("published_at", ""),
+                    employment_type=data.get("employment_type", ""),
+                    work_mode=data.get("work_mode", ""),
+                    seniority=data.get("seniority", ""),
+                    technologies=data.get("technologies", []),
+                )
 
-        return ScrapeResponse(
-            title=data.get("title", ""),
-            company=data.get("company", ""),
-            source_url=req.url,
-            location=data.get("location", ""),
-            salary=data.get("salary", ""),
-            description=data.get("description", ""),
-            recruiter_name=data.get("recruiter_name", ""),
-            published_at=data.get("published_at", ""),
-            employment_type=data.get("employment_type", ""),
-            work_mode=data.get("work_mode", ""),
-            seniority=data.get("seniority", ""),
-            technologies=data.get("technologies", []),
-        )
-
+    print(f"  [SCRAPE] Exhausted all retries: {last_error}")
     raise HTTPException(status_code=502, detail=last_error or _RETRY_EXHAUSTED_MSG)
 
 
 @app.delete("/api/v1/jobs/{job_id}")
-async def delete_job(job_id: str):
-    result = _db().table("job_postings").delete().eq("id", job_id).execute()
+async def delete_job(job_id: str, request: Request):
+    result = _db_for_user(request.state.token).table("job_postings").delete().eq("id", job_id).execute()
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")

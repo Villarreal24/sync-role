@@ -77,7 +77,7 @@ export interface OverlayState {
 }
 
 export interface ExtensionMessage {
-  type: "PAGE_HAS_JOB" | "GET_PAGE_CONTENT" | "PAGE_CONTENT" | "JOB_SAVED" | "SHOW_OVERLAY" | "HIDE_OVERLAY" | "OVERLAY_SAVED" | "GET_OVERLAY_STATE"
+  type: "PAGE_HAS_JOB" | "GET_PAGE_CONTENT" | "PAGE_CONTENT" | "JOB_SAVED" | "SHOW_OVERLAY" | "HIDE_OVERLAY" | "OVERLAY_SAVED" | "GET_OVERLAY_STATE" | "AUTH_CHECK" | "AUTH_LOGIN"
   payload?: PageContent | OverlayState
 }
 

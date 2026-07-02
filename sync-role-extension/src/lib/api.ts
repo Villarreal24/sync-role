@@ -1,10 +1,23 @@
 import { BACKEND_URL } from "./constants"
+import { getAuthHeaders } from "./auth"
 import type { ScrapeRequest, ScrapeResponse, JobPostingPayload } from "./types"
 
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await getAuthHeaders()
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+      ...(options.headers as Record<string, string> || {}),
+    },
+  })
+  return res
+}
+
 export async function scrapePage(data: ScrapeRequest): Promise<ScrapeResponse> {
-  const res = await fetch(`${BACKEND_URL}/scrape`, {
+  const res = await fetchWithAuth(`${BACKEND_URL}/scrape`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
   if (!res.ok) {
@@ -29,9 +42,8 @@ export async function createJob(data: JobPostingPayload): Promise<void> {
     seniority: data.seniority,
     technologies: data.technologies,
   }
-  const res = await fetch(`${BACKEND_URL}/jobs`, {
+  const res = await fetchWithAuth(`${BACKEND_URL}/jobs`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
   if (!res.ok) {

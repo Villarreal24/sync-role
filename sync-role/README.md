@@ -25,7 +25,7 @@ Dev server runs on `http://localhost:3000`.
 Create a `.env` file in this directory:
 
 ```env
-VITE_API_URL=http://localhost:8000/api/v1
+BACKEND_API_URL=http://localhost:8000/api/v1
 ```
 
 ## Project Structure

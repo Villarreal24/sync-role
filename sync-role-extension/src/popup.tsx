@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react"
 import { styles } from "./lib/styles"
 import { btnBase, btnHover, btnOpenIcon, btnArrow } from "./lib/popup-styles"
+import { AuthGate } from "./components/AuthGate"
+import { SignInButton } from "./components/SignInButton"
+import { updateAuthBadge } from "./lib/auth"
 import type { ExtensionMessage, OverlayState } from "./lib/types"
 
-function IndexPopup() {
+function AuthenticatedPopup() {
   const [tabId, setTabId] = useState<number | null>(null)
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [state, setState] = useState<"loading" | "ready" | "error">("loading")
@@ -61,15 +64,7 @@ function IndexPopup() {
   const showOpen = !overlayVisible && state !== "error"
 
   return (
-    <>
-      <style>{`
-        body {
-          margin: 0;
-          padding: 0;
-          background: #09090b;
-        }
-      `}</style>
-      <div style={{ ...styles.container, width: 300, minHeight: "auto", padding: "18px 20px" }}>
+    <div style={{ ...styles.container, width: 300, minHeight: "auto", padding: "18px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 10, color: "#3b82f6" }}>●</span>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#fafafa", letterSpacing: "0.3px" }}>
@@ -145,6 +140,26 @@ function IndexPopup() {
         <style>{`@keyframes sr-spin { to { transform: rotate(360deg); } }`}</style>
       )}
     </div>
+  )
+}
+
+function IndexPopup() {
+  return (
+    <>
+      <style>{`
+        body {
+          margin: 0;
+          padding: 0;
+          background: #09090b;
+        }
+      `}</style>
+      <AuthGate
+        authenticated={<AuthenticatedPopup />}
+        unauthenticated={<SignInButton />}
+        onAuthStateChange={(isAuthenticated) => {
+          updateAuthBadge()
+        }}
+      />
     </>
   )
 }
