@@ -1,6 +1,10 @@
 import { useActionState } from 'react'
 import { spacing, fontSize } from '#/shared/design-tokens'
 import { SubmitButton } from '#/shared/components/SubmitButton'
+import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
+import { Button } from '@/shared/components/ui/button'
+import { cn } from '@/shared/lib/utils'
 
 type FormState = { error?: string } | null
 
@@ -35,75 +39,74 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
 
   return (
     <form action={formAction} className={spacing.field}>
-      <h2 className={`${fontSize.title} text-zinc-100`}>Create Account</h2>
+      <h2 className={cn('text-foreground', fontSize.title)}>Create Account</h2>
 
       <div>
-        <label
+        <Label
           htmlFor="reg-email"
-          className={`block ${fontSize.label} text-zinc-400 ${spacing.fieldLabel}`}
+          className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
           Email
-        </label>
-        <input
+        </Label>
+        <Input
           id="reg-email"
           name="email"
           type="email"
           required
-          className={`w-full ${spacing.inputPad} bg-zinc-800 border border-zinc-700 rounded-md text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500`}
           placeholder="you@example.com"
         />
       </div>
 
       <div>
-        <label
+        <Label
           htmlFor="reg-password"
-          className={`block ${fontSize.label} text-zinc-400 ${spacing.fieldLabel}`}
+          className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
           Password
-        </label>
-        <input
+        </Label>
+        <Input
           id="reg-password"
           name="password"
           type="password"
           required
           minLength={8}
-          className={`w-full ${spacing.inputPad} bg-zinc-800 border border-zinc-700 rounded-md text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500`}
           placeholder="At least 8 characters"
         />
       </div>
 
       <div>
-        <label
+        <Label
           htmlFor="reg-confirm"
-          className={`block ${fontSize.label} text-zinc-400 ${spacing.fieldLabel}`}
+          className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
           Confirm Password
-        </label>
-        <input
+        </Label>
+        <Input
           id="reg-confirm"
           name="confirm"
           type="password"
           required
-          className={`w-full ${spacing.inputPad} bg-zinc-800 border border-zinc-700 rounded-md text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500`}
           placeholder="Repeat your password"
         />
       </div>
 
       {state?.error && (
-        <p className={`${fontSize.error} text-red-400`}>{state.error}</p>
+        <p className={cn('text-destructive', fontSize.error)}>{state.error}</p>
       )}
 
       <SubmitButton pendingLabel="Creating account...">Create Account</SubmitButton>
 
-      <p className={`${fontSize.muted} text-zinc-500 text-center`}>
+      <p className={cn('text-muted-foreground text-center', fontSize.muted)}>
         Already have an account?{' '}
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={onToggleMode}
-          className="text-blue-400 hover:text-blue-300 underline"
+          className="h-auto p-0"
         >
           Sign In
-        </button>
+        </Button>
       </p>
     </form>
   )
