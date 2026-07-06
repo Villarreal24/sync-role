@@ -13,7 +13,7 @@ export const Route = createFileRoute('/_authenticated/applications')({
   component: Applications,
 })
 
-function Applications() {
+export function Applications() {
   const { view = 'board' } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 

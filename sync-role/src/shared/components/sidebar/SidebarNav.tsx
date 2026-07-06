@@ -1,5 +1,5 @@
 import { LayoutGrid, Briefcase } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Link, useMatchRoute } from '@tanstack/react-router'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
 import { cn } from '@/shared/lib/utils'
@@ -12,21 +12,20 @@ interface SidebarNavItemProps {
 
 export function SidebarNavItem({ to, label, icon }: SidebarNavItemProps) {
   const collapsed = useSidebarStore((s) => s.collapsed)
+  const matchRoute = useMatchRoute()
+  const isActive = Boolean(matchRoute({ to, fuzzy: to !== '/' }))
 
   const content = (
     <Link
       to={to}
-      activeOptions={{ exact: to === '/' }}
-      className={({ isActive }) =>
-        cn(
-          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-accent text-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-          collapsed && 'justify-center px-0',
-        )
-      }
       aria-label={label}
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        isActive
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+        collapsed && 'justify-center px-0',
+      )}
     >
       <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
       <span className={cn(collapsed && 'hidden')}>{label}</span>

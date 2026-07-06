@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import { useAuth } from '@/features/auth/hooks/use-auth'
-import { useThemeStore, type Theme } from '@/features/theme/theme.store'
+import { useThemeStore } from '@/features/theme/theme.store'
 
 interface ProfileMenuProps {
   children: React.ReactNode

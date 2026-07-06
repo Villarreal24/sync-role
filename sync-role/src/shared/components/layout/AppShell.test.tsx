@@ -21,6 +21,7 @@ vi.mock('@tanstack/react-router', async () => {
         )
       },
     ),
+    useMatchRoute: () => () => false,
   }
 })
 

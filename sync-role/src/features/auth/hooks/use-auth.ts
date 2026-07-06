@@ -78,7 +78,7 @@ export function useAuth() {
         return false
       }
       const data: AuthResponse = await res.json()
-      setAuth(data.access_token, data.refresh_token, data.user)
+      setAuth(data.access_token, data.refresh_token, toAuthUser(data.user))
       return true
     } catch {
       clearAuth()
