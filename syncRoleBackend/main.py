@@ -169,8 +169,9 @@ REQUIRED JSON STRUCTURE:
 """
 
 
-_RETRY_TOKEN_LIMITS = [2000, 3000, 4000]
+_RETRY_TOKEN_LIMITS = [4000, 6000, 10000]
 _RETRY_BACKOFF = [1, 3, 6]
+_MAX_PAGE_CONTENT_CHARS = 12000
 
 
 def _call_llm(client: OpenAI, req: ScrapeRequest, max_tokens: int) -> str:
@@ -215,6 +216,12 @@ async def scrape_job(req: ScrapeRequest, request: Request):
           f"page_content_len={len(req.page_content)}, "
           f"origin={request.headers.get('origin', 'none')!r}, "
           f"provider={settings.llm_provider!r}")
+
+    if len(req.page_content) > _MAX_PAGE_CONTENT_CHARS:
+        truncated = req.page_content[:_MAX_PAGE_CONTENT_CHARS]
+        print(f"  [SCRAPE] Truncating page_content {len(req.page_content)} -> "
+              f"{_MAX_PAGE_CONTENT_CHARS} chars")
+        req = req.model_copy(update={"page_content": truncated})
 
     try:
         client = _get_llm_client()

@@ -91,7 +91,34 @@ function FloatingPanel({ hidden, minimized, loading, loadingMessage, onMinimize,
 
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Defensive reset: host pages (LinkedIn, Indeed, etc.) can override
+           our inline styles with global form rules. Force our spacing and
+           font sizing on the extension container so the panel renders
+           consistently across all pages. */
+        #syncrole-overlay-root input,
+        #syncrole-overlay-root select,
+        #syncrole-overlay-root textarea,
+        #syncrole-overlay-root button {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          font-size: 12px !important;
+          line-height: 1.4 !important;
+          letter-spacing: normal !important;
+          text-transform: none !important;
+        }
+        #syncrole-overlay-root input,
+        #syncrole-overlay-root textarea {
+          padding: 7px 10px !important;
+        }
+        #syncrole-overlay-root select {
+          padding: 7px 10px !important;
+          padding-right: 28px !important;
+        }
+        #syncrole-overlay-root button {
+          margin: 0 !important;
+        }
+      `}</style>
       <div
         ref={panelRef}
         style={{
@@ -165,8 +192,8 @@ function FloatingPanel({ hidden, minimized, loading, loadingMessage, onMinimize,
       {!minimized && (
         <div
           style={{
-            padding: 14,
-            height: "calc(100vh - 200px)",
+            padding: 12,
+            maxHeight: "calc(100vh - 60px)",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",

@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { TooltipProvider } from '@/shared/components/ui/tooltip'
 
 import appCss from '../styles.css?url'
 
@@ -58,13 +59,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
-      <body className="bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="bg-background text-foreground antialiased">
         <QueryClientProvider client={queryClient}>
-          <AuthGuard>{children}</AuthGuard>
+          <TooltipProvider delayDuration={150}>
+            <AuthGuard>{children}</AuthGuard>
+          </TooltipProvider>
         </QueryClientProvider>
         <TanStackDevtools
           config={{

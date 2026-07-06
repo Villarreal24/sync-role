@@ -2,23 +2,21 @@ import { useState } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import type { JobPosting, JobStatus } from '../types'
 import { ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
-import { getWorkModeColor, getEmploymentTypeColor, getSeniorityColor } from '#/shared/helpers'
+import { statusToken, spacing, fontSize } from '@/shared/design-tokens'
+import { TagBadge } from '@/shared/components/TagBadge'
+import { Card, CardContent, CardFooter, CardHeader } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select'
+import { cn } from '@/shared/lib/utils'
 
-const statusColors: Record<JobStatus, string> = {
-  saved: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-  applied: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-  interviewing: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
-  offer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200',
-}
-
-const statusLabels: Record<JobStatus, string> = {
-  saved: 'Saved',
-  applied: 'Applied',
-  interviewing: 'Interviewing',
-  rejected: 'Rejected',
-  offer: 'Offer',
-}
+const statusValues: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
 interface Props {
   job: JobPosting
@@ -29,136 +27,149 @@ export function JobCard({ job }: Props) {
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateStatus.mutate({ id: job.id, status: e.target.value as JobStatus })
+  const handleStatusChange = (value: string) => {
+    updateStatus.mutate({ id: job.id, status: value as JobStatus })
   }
 
   const handleDelete = () => {
     deleteJob.mutate(job.id)
   }
 
+  const status = statusToken(job.status)
+
   return (
-    <article className="rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            {job.title}
-          </h3>
-          <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
-            {job.company}
-          </p>
-        </div>
-        <span
-          className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[job.status]}`}
-        >
-          {statusLabels[job.status]}
-        </span>
-      </div>
-
-      <div className="mb-2 flex flex-wrap gap-1.5">
-        {job.workMode && (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getWorkModeColor(job.workMode)}`}
-          >
-            {job.workMode}
-          </span>
-        )}
-        {job.employmentType && (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getEmploymentTypeColor(job.employmentType)}`}
-          >
-            {job.employmentType}
-          </span>
-        )}
-        {job.seniority && (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getSeniorityColor(job.seniority)}`}
-          >
-            {job.seniority}
-          </span>
-        )}
-      </div>
-
-      {job.location && (
-        <p className="mb-1 text-xs text-zinc-400">{job.location}</p>
-      )}
-      {job.salary && (
-        <p className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-          {job.salary}
-        </p>
-      )}
-      <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-zinc-400">
-        {job.recruiterName && <span>Recruiter: {job.recruiterName}</span>}
-        {job.publishedAt && <span>{job.publishedAt}</span>}
-      </div>
-
-      {job.technologies.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {job.technologies.map((tech) => (
-            <span
-              key={tech}
-              className="inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-            >
-              {tech}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {job.description && (
-        <div className="mb-3">
-          <button
-            onClick={() => setShowDescription(!showDescription)}
-            className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            {showDescription ? (
-              <>
-                <ChevronUp size={12} /> Hide description
-              </>
-            ) : (
-              <>
-                <ChevronDown size={12} /> Show description
-              </>
-            )}
-          </button>
-          {showDescription && (
-            <p className="mt-1 line-clamp-6 whitespace-pre-wrap text-xs text-zinc-500 dark:text-zinc-400">
-              {job.description}
+    <Card className="shadow-sm hover:shadow-md transition-shadow gap-0 p-0">
+      <CardHeader className="p-4 pb-3 gap-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className={cn('truncate text-base font-semibold text-foreground')}>
+              {job.title}
+            </h3>
+            <p className={cn('truncate text-muted-foreground', fontSize.body)}>
+              {job.company}
             </p>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between gap-2 border-t pt-3 dark:border-zinc-800">
-        <select
-          value={job.status}
-          onChange={handleStatusChange}
-          className="rounded-lg border bg-transparent px-2 py-1 text-xs text-zinc-600 outline-none transition-colors hover:border-zinc-400 focus:border-blue-500 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-500"
-        >
-          {Object.entries(statusLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-1">
-          <a
-            href={job.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          </div>
+          <Badge
+            variant="static"
+            className={cn(
+              'shrink-0 rounded-full px-2.5 py-0.5 font-medium',
+              status.bg,
+              status.text,
+            )}
           >
-            <ExternalLink size={14} />
-          </a>
-          <button
+            {status.label}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0 space-y-2">
+        <div className="flex flex-wrap gap-1.5">
+          {job.workMode && <TagBadge kind="workMode" value={job.workMode} />}
+          {job.employmentType && <TagBadge kind="employment" value={job.employmentType} />}
+          {job.seniority && <TagBadge kind="seniority" value={job.seniority} />}
+        </div>
+
+        {job.location && (
+          <p className={cn('text-muted-foreground', fontSize.caption)}>{job.location}</p>
+        )}
+        {job.salary && (
+          <p className={cn('font-medium text-muted-foreground', fontSize.caption)}>
+            {job.salary}
+          </p>
+        )}
+        <div className={cn('flex flex-wrap gap-3 text-muted-foreground', fontSize.caption)}>
+          {job.recruiterName && <span>Recruiter: {job.recruiterName}</span>}
+          {job.publishedAt && <span>{job.publishedAt}</span>}
+        </div>
+
+        {job.technologies.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {job.technologies.map((tech) => (
+              <Badge
+                key={tech}
+                variant="static"
+                className={cn(
+                  'rounded-md px-1.5 py-0.5 font-medium',
+                  fontSize.caption,
+                  'bg-secondary text-secondary-foreground',
+                )}
+              >
+                {tech}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {job.description && (
+          <div>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => setShowDescription(!showDescription)}
+              className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {showDescription ? (
+                <>
+                  <ChevronUp size={12} /> Hide description
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={12} /> Show description
+                </>
+              )}
+            </Button>
+            {showDescription && (
+              <p className={cn('mt-1 line-clamp-6 whitespace-pre-wrap text-muted-foreground', fontSize.caption)}>
+                {job.description}
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className={cn(spacing.cardFooter, 'border-t border-border flex items-center justify-between gap-1')}>
+        <Select value={job.status} onValueChange={handleStatusChange}>
+          <SelectTrigger className={cn(
+            'h-5 w-auto min-w-[4rem] border-input bg-transparent text-muted-foreground px-1.5 gap-1',
+            fontSize.caption,
+            '[&>svg]:size-3',
+          )}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {statusValues.map((value) => (
+              <SelectItem key={value} value={value} className={fontSize.caption}>
+                {statusToken(value).label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className={cn('flex items-center', spacing.buttonGroup)}>
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            aria-label="Open source"
+            className="h-5 w-5 text-muted-foreground hover:text-foreground"
+          >
+            <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink size={9} />
+            </a>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Delete job"
             onClick={handleDelete}
-            className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
+            className="h-5 w-5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={9} />
+          </Button>
         </div>
-      </div>
-    </article>
+      </CardFooter>
+    </Card>
   )
 }

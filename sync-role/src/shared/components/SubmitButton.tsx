@@ -1,6 +1,6 @@
 import { useFormStatus } from 'react-dom'
 import type { ReactNode } from 'react'
-import { spacing } from '#/shared/design-tokens'
+import { Button } from '@/shared/components/ui/button'
 
 interface SubmitButtonProps {
   children: ReactNode
@@ -10,12 +10,12 @@ interface SubmitButtonProps {
 export function SubmitButton({ children, pendingLabel }: SubmitButtonProps) {
   const { pending } = useFormStatus()
   return (
-    <button
+    <Button
       type="submit"
       disabled={pending}
-      className={`${spacing.buttonPad} bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-md transition-colors`}
+      className="w-full bg-blue-600 text-white hover:bg-blue-700"
     >
       {pending ? pendingLabel : children}
-    </button>
+    </Button>
   )
 }

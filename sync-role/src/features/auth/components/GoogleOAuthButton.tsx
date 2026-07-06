@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { spacing, fontSize } from '#/shared/design-tokens'
+import { fontSize } from '#/shared/design-tokens'
+import { Button } from '@/shared/components/ui/button'
 
 const API_BASE = import.meta.env.BACKEND_API_URL
 
@@ -20,11 +21,12 @@ export function GoogleOAuthButton() {
   }, [])
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className={`mt-4 ${spacing.buttonPad} bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-100 font-medium rounded-md border border-zinc-700 transition-colors flex items-center justify-center gap-2`}
+      variant="outline"
+      className="mt-4 w-full"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path
@@ -45,6 +47,6 @@ export function GoogleOAuthButton() {
         />
       </svg>
       <span className={fontSize.body}>{loading ? 'Redirecting...' : 'Sign in with Google'}</span>
-    </button>
+    </Button>
   )
 }
