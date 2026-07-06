@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from 'react'
+import { useEffect } from 'react'
 import { HeadContent, Scripts, createRootRoute, useRouter, useLocation } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -7,7 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ThemeScript } from '@/features/theme/ThemeScript'
-import { SyncRoleLogo } from '@/shared/components/brand/SyncRoleLogo'
+import { Splash } from '@/shared/components/brand/Splash'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 
 import appCss from '../styles.css?url'
@@ -60,21 +60,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
   const location = useLocation()
-
-  // Safety net: if public/theme.js failed to remove the splash (CSP,
-  // ad-blocker, etc.), React will on first commit. useLayoutEffect
-  // runs synchronously before the browser paints so the splash goes
-  // away with no extra flicker.
-  useLayoutEffect(() => {
-    if (typeof document === 'undefined') return
-    const splash = document.getElementById('app-splash')
-    if (splash && splash.parentNode) {
-      splash.classList.add('app-splash--fading')
-      setTimeout(() => {
-        if (splash.parentNode) splash.parentNode.removeChild(splash)
-      }, 400)
-    }
-  }, [])
 
   useEffect(() => {
     // Only run client-side — SSR renders the page without auth check
@@ -132,9 +117,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-background text-foreground antialiased">
-        <div id="app-splash" aria-hidden="true">
-          <SyncRoleLogo size="md" className="text-muted-foreground" />
-        </div>
+        <Splash />
         <QueryClientProvider client={queryClient}>
           <TooltipProvider delayDuration={150}>
             <AuthGuard>{children}</AuthGuard>

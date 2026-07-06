@@ -2,11 +2,10 @@ export function ThemeScript() {
   return (
     <>
       {/* Blocking script: applies the .dark class before first paint
-          to prevent the white flash in dark mode. Must NOT be deferred. */}
+          to prevent the white flash in dark mode. Must NOT be deferred.
+          The splash itself is managed by the <Splash/> React component
+          so it stays in sync with the React tree (no hydration mismatch). */}
       <script src="/theme-class.js" />
-      {/* Deferred script: removes the splash once the body is parsed
-          and React is about to take over. */}
-      <script src="/theme-splash.js" defer />
     </>
   )
 }
