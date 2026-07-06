@@ -7,6 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ThemeScript } from '@/features/theme/ThemeScript'
+import { SyncRoleLogo } from '@/shared/components/brand/SyncRoleLogo'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 
 import appCss from '../styles.css?url'
@@ -100,22 +101,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-background text-foreground antialiased">
         <div id="app-splash" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z" />
-            <path d="M12 7 L12 12" />
-            <path d="M8 9.5 L12 12" />
-            <path d="M16 9.5 L12 12" />
-            <path d="M8 14.5 L12 12" />
-            <path d="M16 14.5 L12 12" />
-            <path d="M12 17 L12 12" />
-            <circle cx="12" cy="12" r="2" fill="currentColor" />
-            <circle cx="12" cy="7" r="0.9" fill="currentColor" />
-            <circle cx="16" cy="9.5" r="0.9" fill="currentColor" />
-            <circle cx="16" cy="14.5" r="0.9" fill="currentColor" />
-            <circle cx="12" cy="17" r="0.9" fill="currentColor" />
-            <circle cx="8" cy="14.5" r="0.9" fill="currentColor" />
-            <circle cx="8" cy="9.5" r="0.9" fill="currentColor" />
-          </svg>
+          <SyncRoleLogo size="md" className="text-muted-foreground" />
         </div>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider delayDuration={150}>
