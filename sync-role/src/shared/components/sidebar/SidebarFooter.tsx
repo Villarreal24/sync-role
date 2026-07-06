@@ -1,16 +1,21 @@
 import { Settings, MoreVertical } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { Button } from '@/shared/components/ui/button'
+import { useMounted } from '@/shared/hooks/use-mounted'
 import { UserAvatar } from './UserAvatar'
 import { ProfileMenu } from './ProfileMenu'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
 import { cn } from '@/shared/lib/utils'
 
 export function SidebarFooter() {
+  // SSR safety: until mounted, ignore the auth store (server has no
+  // user because getCookie() returns null outside the browser) so the
+  // server and first client render produce the same DOM.
+  const mounted = useMounted()
   const user = useAuthStore((s) => s.user)
   const collapsed = useSidebarStore((s) => s.collapsed)
-  const email = user?.email ?? ''
-  const displayName = user?.displayName ?? ''
+  const email = mounted ? (user?.email ?? '') : ''
+  const displayName = mounted ? (user?.displayName ?? '') : ''
 
   return (
     <div className="border-t border-border p-2">
