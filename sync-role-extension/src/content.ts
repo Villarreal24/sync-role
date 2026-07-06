@@ -32,24 +32,22 @@ window.addEventListener("message", (event) => {
   }
 })
 
-// Inject a script into the page's main world to read cookies (content scripts
-// in MV3 isolated world can't access document.cookie of the page).
-const cookieReader = document.createElement("script")
-cookieReader.textContent = `
-  (function() {
-    var matchToken = document.cookie.match(/(?:^|; )syncrole_token=([^;]*)/);
-    var matchRefresh = document.cookie.match(/(?:^|; )syncrole_refresh=([^;]*)/);
-    if (matchToken && matchRefresh) {
-      window.postMessage({
-        type: "SYNCROLE_AUTH",
-        access_token: decodeURIComponent(matchToken[1]),
-        refresh_token: decodeURIComponent(matchRefresh[1]),
-      }, window.location.origin);
+// Read cookies directly from the isolated world context (no script injection required)
+function syncTokensFromCookies() {
+  const matchToken = document.cookie.match(/(?:^|; )syncrole_token=([^;]*)/)
+  const matchRefresh = document.cookie.match(/(?:^|; )syncrole_refresh=([^;]*)/)
+  if (matchToken && matchRefresh) {
+    const access_token = decodeURIComponent(matchToken[1])
+    const refresh_token = decodeURIComponent(matchRefresh[1])
+    if (access_token && refresh_token && isValidJwt(access_token)) {
+      setStoredTokens(access_token, refresh_token)
+      chrome.runtime.sendMessage({ type: "AUTH_LOGIN" })
     }
-  })();
-`
-document.documentElement.appendChild(cookieReader)
-cookieReader.remove()
+  }
+}
+
+// Run the sync on load
+syncTokensFromCookies()
 
 const container = document.createElement("div")
 container.id = "syncrole-overlay-root"
