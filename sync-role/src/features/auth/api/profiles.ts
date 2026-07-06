@@ -1,3 +1,5 @@
+import { apiClient, ApiError } from '@/core/api/client'
+
 export interface Profile {
   id: string
   displayName: string
@@ -34,38 +36,26 @@ function toProfile(row: ProfileResponse): Profile {
   }
 }
 
-import { useAuthStore } from '../store/auth.store'
-
-const API_BASE = import.meta.env.BACKEND_API_URL
-
-function getAuthHeaders(): Record<string, string> {
-  const token = useAuthStore.getState().token
-  if (token) {
-    return { Authorization: `Bearer ${token}` }
-  }
-  return {}
-}
-
+/**
+ * Fetch the authenticated user's profile.
+ * Returns null when the profile row does not exist yet (Supabase signup
+ * with RLS does not auto-create the row — the backend /profiles/me
+ * returns 404 in that case).
+ */
 export async function getProfile(): Promise<Profile | null> {
-  const res = await fetch(`${API_BASE}/api/v1/profiles/me`, {
-    headers: { ...getAuthHeaders() },
-  })
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error(`GET /profiles/me failed: ${res.status}`)
-  const data: ProfileResponse = await res.json()
-  return toProfile(data)
+  try {
+    const data = await apiClient.get<ProfileResponse>('/profiles/me')
+    return toProfile(data)
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
 export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
   const body: ProfileUpdateRequest = {}
   if (update.displayName !== undefined) body.display_name = update.displayName
   if (update.avatarUrl !== undefined) body.avatar_url = update.avatarUrl
-  const res = await fetch(`${API_BASE}/api/v1/profiles/me`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`PATCH /profiles/me failed: ${res.status}`)
-  const data: ProfileResponse = await res.json()
+  const data = await apiClient.patch<ProfileResponse>('/profiles/me', body)
   return toProfile(data)
 }
