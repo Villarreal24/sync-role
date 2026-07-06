@@ -23,7 +23,7 @@ from syncRoleBackend.schemas import (
     _now_iso,
 )
 
-app = FastAPI(title="ApplySync API", version="1.0.0")
+app = FastAPI(title="Sync Role API", version="1.0.0")
 
 _llm_client: OpenAI | None = None
 
@@ -97,7 +97,7 @@ def _db_for_user(token: str | None) -> Client:
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to ApplySync API"}
+    return {"message": "Welcome to Sync Role API"}
 
 
 @app.get("/api/v1/jobs", response_model=List[JobPostingResponse])

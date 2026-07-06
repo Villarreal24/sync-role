@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-**SyncRole** is a browser extension that scrapes job posting data from any job board page (LinkedIn, Indeed, Glassdoor, etc.) using an LLM (GPT-4o-mini), and saves it to the ApplySync job tracker via the FastAPI backend.
+**Sync Role** is a browser extension that scrapes job posting data from any job board page (LinkedIn, Indeed, Glassdoor, etc.) using an LLM (GPT-4o-mini), and saves it to the Sync Role job tracker via the FastAPI backend.
 
 ### Architecture
 

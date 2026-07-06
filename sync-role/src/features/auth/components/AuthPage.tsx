@@ -33,7 +33,7 @@ export function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-foreground">ApplySync</h1>
+          <h1 className="text-2xl font-bold text-foreground">Sync Role</h1>
           <p className={cn('mt-1 text-muted-foreground', fontSize.body)}>
             {isLogin ? 'Welcome back' : 'Create your account'}
           </p>

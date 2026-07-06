@@ -60,7 +60,7 @@ describe('Home route', () => {
 
   it('renders the board view by default (no ?view= param)', async () => {
     renderHome('/')
-    expect(await screen.findByRole('heading', { name: 'ApplySync' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sync Role' })).toBeInTheDocument()
     expect(
       await screen.findByPlaceholderText(/search by title or company/i),
     ).toBeInTheDocument()
@@ -72,7 +72,7 @@ describe('Home route', () => {
 
   it('renders the list view when ?view=list', async () => {
     renderHome('/?view=list')
-    expect(await screen.findByRole('heading', { name: 'ApplySync' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sync Role' })).toBeInTheDocument()
     expect(await screen.findByText('Vacancy / Company')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /list view/i })).toHaveAttribute(
       'data-state',
@@ -82,7 +82,7 @@ describe('Home route', () => {
 
   it('falls back to the board view when ?view= is set to an unknown value', async () => {
     renderHome('/?view=analytics')
-    expect(await screen.findByRole('heading', { name: 'ApplySync' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sync Role' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /board view/i })).toHaveAttribute(
       'data-state',
       'on',

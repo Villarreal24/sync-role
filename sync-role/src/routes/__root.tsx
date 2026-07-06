@@ -23,7 +23,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'ApplySync - Job Tracker',
+        title: 'Sync Role - Job Tracker',
       },
     ],
     links: [

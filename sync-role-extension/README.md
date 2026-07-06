@@ -1,6 +1,6 @@
-# ApplySync — Browser Extension
+# Sync Role — Browser Extension
 
-A Chrome MV3 extension that extracts job data from **any** HTTPS job board via GPT-4o-mini and saves it to the ApplySync job tracker with one click. Works on LinkedIn, Indeed, Greenhouse, and any other site — if automatic scraping fails, the form falls back to manual entry.
+A Chrome MV3 extension that extracts job data from **any** HTTPS job board via GPT-4o-mini and saves it to the Sync Role job tracker with one click. Works on LinkedIn, Indeed, Greenhouse, and any other site — if automatic scraping fails, the form falls back to manual entry.
 
 ## Tech Stack
 
