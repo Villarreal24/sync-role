@@ -1,4 +1,9 @@
+from typing import Any
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_URL_FIELDS = ("supabase_url", "frontend_url", "backend_url")
 
 
 class Settings(BaseSettings):
@@ -22,6 +27,13 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash-lite"
     openai_model: str = "gpt-4o-mini"
     groq_model: str = "llama-3.1-8b-instant"
+
+    @field_validator(*_URL_FIELDS, mode="before")
+    @classmethod
+    def _strip_trailing_slash(cls, v: Any) -> Any:
+        if isinstance(v, str) and v.endswith("/"):
+            return v.rstrip("/")
+        return v
 
 
 settings = Settings()

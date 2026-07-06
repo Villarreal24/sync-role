@@ -1,4 +1,6 @@
 import json as _json
+import os as _os
+import sys as _sys
 import time as _time
 from datetime import date as _date
 from typing import List
@@ -31,6 +33,22 @@ print(f"  [LLM]  Provider={settings.llm_provider!r}, "
       f"Gemini={settings.gemini_model!r}, "
       f"OpenAI={settings.openai_model!r}, "
       f"Groq={settings.groq_model!r}")
+
+print(f"  [URLS] backend_url={settings.backend_url!r}")
+print(f"  [URLS] frontend_url={settings.frontend_url!r}")
+print(f"  [URLS] supabase_url={settings.supabase_url!r}")
+
+_is_production = bool(_os.environ.get("PORT"))
+if _is_production and (
+    "localhost" in settings.frontend_url or "localhost" in settings.backend_url
+):
+    print("\n" + "=" * 70)
+    print("  [FATAL] Production environment detected (PORT env var set)")
+    print("          but frontend_url or backend_url is still pointing to localhost.")
+    print("          Set FRONTEND_URL and BACKEND_URL env vars in Railway,")
+    print("          then redeploy.")
+    print("=" * 70 + "\n")
+    _sys.exit(1)
 
 
 def _get_llm_client() -> OpenAI:
