@@ -18,21 +18,4 @@
     }
     document.documentElement.classList.toggle('dark', resolved === 'dark');
   } catch (e) {}
-
-  function removeSplash() {
-    var splash = document.getElementById('app-splash');
-    if (splash && splash.parentNode) {
-      splash.classList.add('app-splash--fading');
-      setTimeout(function () {
-        if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
-      }, 400);
-    }
-  }
-
-  // Defer may have run us before body was parsed, so guard both paths.
-  if (document.body && document.getElementById('app-splash')) {
-    removeSplash();
-  } else {
-    document.addEventListener('DOMContentLoaded', removeSplash);
-  }
 })();
