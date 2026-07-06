@@ -1,3 +1,4 @@
 {
-  "target": "react"
+  "target": "react",
+  "routeFileIgnorePattern": "((^|\\/)\\..*|\\.test\\.(tsx|ts|jsx|js)$|\\.spec\\.(tsx|ts|jsx|js)$)"
 }
