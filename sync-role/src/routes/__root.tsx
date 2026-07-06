@@ -38,6 +38,7 @@ export const Route = createRootRoute({
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const router = useRouter()
   const location = useLocation()
 
@@ -47,12 +48,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !isAuthRoute) {
       router.navigate({ to: '/auth', replace: true })
+      return
     }
 
     if (isAuthenticated && isAuthRoute) {
       router.navigate({ to: '/', replace: true })
+      return
     }
-  }, [isAuthenticated, location.pathname, router])
+
+    // Hydrate profile (displayName + avatarUrl) once on first authenticated render
+    if (isAuthenticated && user && user.displayName === '' && user.avatarUrl === '') {
+      void useAuthStore.getState().hydrateProfile()
+    }
+  }, [isAuthenticated, user, location.pathname, router])
 
   return <>{children}</>
 }

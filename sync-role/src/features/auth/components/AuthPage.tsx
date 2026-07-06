@@ -23,7 +23,7 @@ export function AuthPage() {
       const refreshToken = params.get('refresh_token') ?? ''
       const userId = params.get('user_id') ?? ''
       const email = params.get('email') ?? ''
-      setAuth(accessToken, refreshToken, { id: userId, email })
+      setAuth(accessToken, refreshToken, { id: userId, email, displayName: '', avatarUrl: '' })
       window.history.replaceState({}, '', '/auth')
       navigate({ to: '/' })
     }

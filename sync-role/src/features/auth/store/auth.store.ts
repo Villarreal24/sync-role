@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   email: string
+  displayName: string
+  avatarUrl: string
 }
 
 interface AuthState {
@@ -13,6 +15,8 @@ interface AuthState {
   setAuth: (token: string, refreshToken: string, user: AuthUser) => void
   clearAuth: () => void
   setToken: (token: string) => void
+  setProfile: (displayName: string, avatarUrl: string) => void
+  hydrateProfile: () => Promise<void>
 }
 
 function setCookie(name: string, value: string, maxAgeSeconds: number = 604800): void {
@@ -31,18 +35,34 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-function loadFromCookies(): { token: string | null; refreshToken: string | null; userId: string | null; email: string | null } {
+function loadFromCookies(): {
+  token: string | null
+  refreshToken: string | null
+  userId: string | null
+  email: string | null
+  displayName: string | null
+  avatarUrl: string | null
+} {
   return {
     token: getCookie('syncrole_token'),
     refreshToken: getCookie('syncrole_refresh'),
     userId: getCookie('syncrole_uid'),
     email: getCookie('syncrole_email'),
+    displayName: getCookie('syncrole_display_name'),
+    avatarUrl: getCookie('syncrole_avatar_url'),
   }
 }
 
 const initial = loadFromCookies()
 const initialUser: AuthUser | null =
-  initial.userId && initial.email ? { id: initial.userId, email: initial.email } : null
+  initial.userId && initial.email
+    ? {
+        id: initial.userId,
+        email: initial.email,
+        displayName: initial.displayName ?? '',
+        avatarUrl: initial.avatarUrl ?? '',
+      }
+    : null
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: initial.token,
@@ -56,6 +76,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     setCookie('syncrole_refresh', refreshToken, 2592000) // refresh_token: 30d
     setCookie('syncrole_uid', user.id, 604800)
     setCookie('syncrole_email', user.email, 604800)
+    if (user.displayName) setCookie('syncrole_display_name', user.displayName, 604800)
+    if (user.avatarUrl) setCookie('syncrole_avatar_url', user.avatarUrl, 604800)
 
     // Notify the extension (content script) so it stores tokens
     window.postMessage(
@@ -75,10 +97,34 @@ export const useAuthStore = create<AuthState>((set) => ({
     removeCookie('syncrole_refresh')
     removeCookie('syncrole_uid')
     removeCookie('syncrole_email')
+    removeCookie('syncrole_display_name')
+    removeCookie('syncrole_avatar_url')
   },
 
   setToken: (token) => {
     set({ token })
     setCookie('syncrole_token', token, 3600)
+  },
+
+  setProfile: (displayName, avatarUrl) => {
+    const current = useAuthStore.getState().user
+    if (!current) return
+    set({
+      user: {
+        id: current.id,
+        email: current.email,
+        displayName,
+        avatarUrl,
+      },
+    })
+    setCookie('syncrole_display_name', displayName, 604800)
+    setCookie('syncrole_avatar_url', avatarUrl, 604800)
+  },
+
+  hydrateProfile: async () => {
+    const { getProfile } = await import('../api/profiles')
+    const profile = await getProfile()
+    if (!profile) return
+    useAuthStore.getState().setProfile(profile.displayName, profile.avatarUrl)
   },
 }))

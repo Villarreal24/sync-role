@@ -79,7 +79,7 @@ describe('AuthPage', () => {
     const state = useAuthStore.getState()
     expect(state.token).toBe('at')
     expect(state.refreshToken).toBe('rt')
-    expect(state.user).toEqual({ id: 'u1', email: 'a@b.com' })
+    expect(state.user).toEqual({ id: 'u1', email: 'a@b.com', displayName: '', avatarUrl: '' })
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
     expect(window.location.search).toBe('')
   })
