@@ -1,3 +1,3 @@
 export function ThemeScript() {
-  return <script src="/theme.js" />
+  return <script src="/theme.js" defer />
 }

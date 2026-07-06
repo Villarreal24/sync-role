@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { HeadContent, Scripts, createRootRoute, useRouter, useLocation } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -60,6 +60,21 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user)
   const router = useRouter()
   const location = useLocation()
+
+  // Safety net: if public/theme.js failed to remove the splash (CSP,
+  // ad-blocker, etc.), React will on first commit. useLayoutEffect
+  // runs synchronously before the browser paints so the splash goes
+  // away with no extra flicker.
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return
+    const splash = document.getElementById('app-splash')
+    if (splash && splash.parentNode) {
+      splash.classList.add('app-splash--fading')
+      setTimeout(() => {
+        if (splash.parentNode) splash.parentNode.removeChild(splash)
+      }, 400)
+    }
+  }, [])
 
   useEffect(() => {
     // Only run client-side — SSR renders the page without auth check
