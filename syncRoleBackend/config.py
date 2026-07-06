@@ -1,14 +1,20 @@
+import os
 from typing import Any
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _URL_FIELDS = ("supabase_url", "frontend_url", "backend_url")
+_REQUIRED_IN_PROD = ("frontend_url", "backend_url", "supabase_url", "supabase_service_role_key")
+
+
+def _is_production() -> bool:
+    return bool(os.environ.get("PORT"))
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=".env" if not _is_production() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -34,6 +40,24 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v.endswith("/"):
             return v.rstrip("/")
         return v
+
+    @model_validator(mode="after")
+    def _enforce_prod_env_vars(self) -> "Settings":
+        if not _is_production():
+            return self
+        missing = [k.upper() for k in _REQUIRED_IN_PROD if k.upper() not in os.environ]
+        if missing:
+            raise RuntimeError(
+                "Missing required env vars in production: "
+                + ", ".join(missing)
+                + ". Set them in Railway and redeploy."
+            )
+        if "localhost" in self.frontend_url or "localhost" in self.backend_url:
+            raise RuntimeError(
+                "FRONTEND_URL or BACKEND_URL resolved to localhost in production. "
+                "Check the values set in Railway (no quotes, no extra spaces, no localhost)."
+            )
+        return self
 
 
 settings = Settings()
