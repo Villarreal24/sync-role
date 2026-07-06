@@ -14,6 +14,22 @@ import appCss from '../styles.css?url'
 
 const queryClient = getQueryClient()
 
+function NotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-semibold">Not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you are looking for does not exist.
+        </p>
+        <a href="/" className="mt-4 inline-block text-sm text-primary underline">
+          Go to Overview
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -35,6 +51,7 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 })
 

@@ -9,7 +9,8 @@ import {
   RouterProvider,
   Outlet,
 } from '@tanstack/react-router'
-import { Applications, Route as ApplicationsRoute } from './applications'
+import { Applications } from '@/features/jobs/components/Applications'
+import { Route as ApplicationsRoute } from './applications'
 import { useJobFiltersStore } from '@/features/jobs/store/job.store'
 
 vi.mock('@/core/api/client', () => ({
