@@ -3,18 +3,18 @@ import { render, screen } from '@testing-library/react'
 import { TagBadge } from './TagBadge'
 
 describe('TagBadge', () => {
-  it('renders the value with the matching token colors', () => {
+  it('renders the value with the matching token CSS var', () => {
     render(<TagBadge kind="workMode" value="Remote" />)
     const badge = screen.getByText('Remote')
-    expect(badge.className).toContain('bg-cyan-100')
-    expect(badge.className).toContain('text-cyan-700')
+    expect(badge.className).toContain('--tag-workMode-Remote-bg')
+    expect(badge.className).toContain('--tag-workMode-Remote-fg')
   })
 
-  it('falls back to the zinc token for unknown values', () => {
+  it('falls back to the fallback token for unknown values', () => {
     render(<TagBadge kind="workMode" value="Unknown" />)
     const badge = screen.getByText('Unknown')
-    expect(badge.className).toContain('bg-zinc-100')
-    expect(badge.className).toContain('text-zinc-600')
+    expect(badge.className).toContain('--tag-fallback-bg')
+    expect(badge.className).toContain('--tag-fallback-fg')
   })
 
   it('renders the caption fontSize token', () => {

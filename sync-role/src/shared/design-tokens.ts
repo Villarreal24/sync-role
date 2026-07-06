@@ -44,30 +44,42 @@ export type StatusToken = {
   label: string
 }
 
+function hslVar(name: string): string {
+  return `hsl(var(${name}))`
+}
+
+function bgVar(name: string): string {
+  return `[background-color:${hslVar(name)}]`
+}
+
+function textVar(name: string): string {
+  return `[color:${hslVar(name)}]`
+}
+
 export const statusTokens: Record<'saved' | 'applied' | 'interviewing' | 'rejected' | 'offer', StatusToken> = {
   saved: {
-    bg: 'bg-zinc-100 dark:bg-zinc-800',
-    text: 'text-zinc-700 dark:text-zinc-300',
+    bg: bgVar('--status-saved-bg'),
+    text: textVar('--status-saved-fg'),
     label: 'Saved',
   },
   applied: {
-    bg: 'bg-blue-100 dark:bg-blue-900',
-    text: 'text-blue-700 dark:text-blue-200',
+    bg: bgVar('--status-applied-bg'),
+    text: textVar('--status-applied-fg'),
     label: 'Applied',
   },
   interviewing: {
-    bg: 'bg-amber-100 dark:bg-amber-900',
-    text: 'text-amber-700 dark:text-amber-200',
+    bg: bgVar('--status-interviewing-bg'),
+    text: textVar('--status-interviewing-fg'),
     label: 'Interviewing',
   },
   rejected: {
-    bg: 'bg-red-100 dark:bg-red-900',
-    text: 'text-red-700 dark:text-red-200',
+    bg: bgVar('--status-rejected-bg'),
+    text: textVar('--status-rejected-fg'),
     label: 'Rejected',
   },
   offer: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900',
-    text: 'text-emerald-700 dark:text-emerald-200',
+    bg: bgVar('--status-offer-bg'),
+    text: textVar('--status-offer-fg'),
     label: 'Offer',
   },
 }
@@ -75,31 +87,46 @@ export const statusTokens: Record<'saved' | 'applied' | 'interviewing' | 'reject
 export type TagKind = 'workMode' | 'employment' | 'seniority'
 export type TagToken = { bg: string; text: string }
 
+function normalizeTagValue(value: string): string {
+  return value.replace(/-/g, '')
+}
+
+function tagVarKey(kind: TagKind, value: string): string {
+  return `--tag-${kind}-${normalizeTagValue(value)}`
+}
+
+function tagTokenFor(kind: TagKind, value: string): TagToken {
+  return {
+    bg: bgVar(`${tagVarKey(kind, value)}-bg`),
+    text: textVar(`${tagVarKey(kind, value)}-fg`),
+  }
+}
+
 export const tagTokens: Record<TagKind, Record<string, TagToken>> = {
   workMode: {
-    Remote: { bg: 'bg-cyan-100 dark:bg-cyan-900', text: 'text-cyan-700 dark:text-cyan-200' },
-    Hybrid: { bg: 'bg-violet-100 dark:bg-violet-900', text: 'text-violet-700 dark:text-violet-200' },
-    'On-site': { bg: 'bg-orange-100 dark:bg-orange-900', text: 'text-orange-700 dark:text-orange-200' },
+    Remote: tagTokenFor('workMode', 'Remote'),
+    Hybrid: tagTokenFor('workMode', 'Hybrid'),
+    'On-site': tagTokenFor('workMode', 'On-site'),
   },
   employment: {
-    'Full-time': { bg: 'bg-emerald-100 dark:bg-emerald-900', text: 'text-emerald-700 dark:text-emerald-200' },
-    'Part-time': { bg: 'bg-yellow-100 dark:bg-yellow-900', text: 'text-yellow-700 dark:text-yellow-200' },
-    Contract: { bg: 'bg-red-100 dark:bg-red-900', text: 'text-red-700 dark:text-red-200' },
-    Freelance: { bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-700 dark:text-purple-200' },
-    Internship: { bg: 'bg-pink-100 dark:bg-pink-900', text: 'text-pink-700 dark:text-pink-200' },
+    'Full-time': tagTokenFor('employment', 'Full-time'),
+    'Part-time': tagTokenFor('employment', 'Part-time'),
+    Contract: tagTokenFor('employment', 'Contract'),
+    Freelance: tagTokenFor('employment', 'Freelance'),
+    Internship: tagTokenFor('employment', 'Internship'),
   },
   seniority: {
-    Junior: { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-700 dark:text-green-200' },
-    Mid: { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-200' },
-    Senior: { bg: 'bg-amber-100 dark:bg-amber-900', text: 'text-amber-700 dark:text-amber-200' },
-    Staff: { bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-700 dark:text-purple-200' },
-    Principal: { bg: 'bg-rose-100 dark:bg-rose-900', text: 'text-rose-700 dark:text-rose-200' },
+    Junior: tagTokenFor('seniority', 'Junior'),
+    Mid: tagTokenFor('seniority', 'Mid'),
+    Senior: tagTokenFor('seniority', 'Senior'),
+    Staff: tagTokenFor('seniority', 'Staff'),
+    Principal: tagTokenFor('seniority', 'Principal'),
   },
 }
 
 export const tagFallback: TagToken = {
-  bg: 'bg-zinc-100 dark:bg-zinc-800',
-  text: 'text-zinc-600 dark:text-zinc-300',
+  bg: bgVar('--tag-fallback-bg'),
+  text: textVar('--tag-fallback-fg'),
 }
 
 export function statusToken(status: keyof typeof statusTokens): StatusToken {
