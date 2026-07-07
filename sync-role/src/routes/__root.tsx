@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { ThemeController } from '@/features/theme/ThemeController'
 import { ThemeScript } from '@/features/theme/ThemeScript'
 import { Splash } from '@/shared/components/brand/Splash'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
@@ -120,6 +121,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-background text-foreground antialiased">
         <Splash />
+        <ThemeController />
         <QueryClientProvider client={queryClient}>
           <TooltipProvider delayDuration={150}>
             <AuthGuard>{children}</AuthGuard>
