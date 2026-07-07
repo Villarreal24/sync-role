@@ -9,7 +9,7 @@ import {
   RouterProvider,
   Outlet,
 } from '@tanstack/react-router'
-import { ProfileRoute } from './profile'
+import { ProfileRoute } from '@/features/auth/components/ProfileRoute'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 
 vi.mock('@/core/api/client', () => ({
