@@ -23,9 +23,10 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
   const { logout } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogOut = async () => {
-    await logout()
-    navigate({ to: '/auth', replace: true })
+  const handleLogOut = () => {
+    // logout() already navigates to /auth (with replace: true) after
+    // clearing the session. No need to navigate again here.
+    void logout()
   }
 
   return (

@@ -12,6 +12,15 @@ interface AuthState {
   refreshToken: string | null
   user: AuthUser | null
   isAuthenticated: boolean
+  /**
+   * True after hydrateProfile() has run at least once for this session.
+   * Prevents the AuthGuard from re-fetching /profiles/me on every
+   * render when the user has an empty profile (e.g. signed up via
+   * email/password and never set displayName/avatarUrl — the
+   * backend returns 404 and the store stays empty, so checking
+   * user.displayName === '' alone would loop forever).
+   */
+  profileHydrated: boolean
   setAuth: (token: string, refreshToken: string, user: AuthUser) => void
   clearAuth: () => void
   setToken: (token: string) => void
@@ -69,9 +78,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: initial.refreshToken,
   user: initialUser,
   isAuthenticated: initial.token !== null && initial.userId !== null,
+  profileHydrated: false,
 
   setAuth: (token, refreshToken, user) => {
-    set({ token, refreshToken, user, isAuthenticated: true })
+    set({
+      token,
+      refreshToken,
+      user,
+      isAuthenticated: true,
+      // New session: re-hydrate the profile on next AuthGuard run.
+      profileHydrated: false,
+    })
     setCookie('syncrole_token', token, 3600) // access_token: 1h
     setCookie('syncrole_refresh', refreshToken, 2592000) // refresh_token: 30d
     setCookie('syncrole_uid', user.id, 604800)
@@ -92,13 +109,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: () => {
-    set({ token: null, refreshToken: null, user: null, isAuthenticated: false })
+    set({
+      token: null,
+      refreshToken: null,
+      user: null,
+      isAuthenticated: false,
+      profileHydrated: false,
+    })
     removeCookie('syncrole_token')
     removeCookie('syncrole_refresh')
     removeCookie('syncrole_uid')
     removeCookie('syncrole_email')
     removeCookie('syncrole_display_name')
     removeCookie('syncrole_avatar_url')
+
+    // Tell the extension to drop its cached tokens so it doesn't
+    // try to use a session that no longer exists server-side.
+    window.postMessage({ type: 'SYNCROLE_LOGOUT' }, window.location.origin)
   },
 
   setToken: (token) => {
@@ -123,8 +150,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   hydrateProfile: async () => {
     const { getProfile } = await import('../api/profiles')
-    const profile = await getProfile()
-    if (!profile) return
-    useAuthStore.getState().setProfile(profile.displayName, profile.avatarUrl)
+    try {
+      const profile = await getProfile()
+      if (profile) {
+        useAuthStore.getState().setProfile(profile.displayName, profile.avatarUrl)
+      }
+    } finally {
+      // Mark hydrated regardless of outcome (success, 404, error) so
+      // the AuthGuard doesn't loop re-fetching on every render.
+      set({ profileHydrated: true })
+    }
   },
 }))

@@ -52,31 +52,37 @@ export type StatusToken = {
  * scanner sees the complete class name. If the scanner can't find
  * the literal, it never emits the utility and the badge renders
  * transparent over the card background.
+ *
+ * Uses the idiomatic Tailwind v4 arbitrary-value syntax: `bg-[<color>]`
+ * and `text-[<color>]` (the `bg-` / `text-` prefix maps to
+ * background-color and color respectively). Equivalent to the
+ * explicit `[background-color:…]` / `[color:…]` syntax but shorter
+ * and consistent with the rest of the codebase.
  */
 export const statusTokens: Record<'saved' | 'applied' | 'interviewing' | 'rejected' | 'offer', StatusToken> = {
   saved: {
-    bg: '[background-color:hsl(var(--status-saved-bg))]',
-    text: '[color:hsl(var(--status-saved-fg))]',
+    bg: 'bg-[hsl(var(--status-saved-bg))]',
+    text: 'text-[hsl(var(--status-saved-fg))]',
     label: 'Saved',
   },
   applied: {
-    bg: '[background-color:hsl(var(--status-applied-bg))]',
-    text: '[color:hsl(var(--status-applied-fg))]',
+    bg: 'bg-[hsl(var(--status-applied-bg))]',
+    text: 'text-[hsl(var(--status-applied-fg))]',
     label: 'Applied',
   },
   interviewing: {
-    bg: '[background-color:hsl(var(--status-interviewing-bg))]',
-    text: '[color:hsl(var(--status-interviewing-fg))]',
+    bg: 'bg-[hsl(var(--status-interviewing-bg))]',
+    text: 'text-[hsl(var(--status-interviewing-fg))]',
     label: 'Interviewing',
   },
   rejected: {
-    bg: '[background-color:hsl(var(--status-rejected-bg))]',
-    text: '[color:hsl(var(--status-rejected-fg))]',
+    bg: 'bg-[hsl(var(--status-rejected-bg))]',
+    text: 'text-[hsl(var(--status-rejected-fg))]',
     label: 'Rejected',
   },
   offer: {
-    bg: '[background-color:hsl(var(--status-offer-bg))]',
-    text: '[color:hsl(var(--status-offer-fg))]',
+    bg: 'bg-[hsl(var(--status-offer-bg))]',
+    text: 'text-[hsl(var(--status-offer-fg))]',
     label: 'Offer',
   },
 }
@@ -87,67 +93,67 @@ export type TagToken = { bg: string; text: string }
 export const tagTokens: Record<TagKind, Record<string, TagToken>> = {
   workMode: {
     Remote: {
-      bg: '[background-color:hsl(var(--tag-workMode-Remote-bg))]',
-      text: '[color:hsl(var(--tag-workMode-Remote-fg))]',
+      bg: 'bg-[hsl(var(--tag-workMode-Remote-bg))]',
+      text: 'text-[hsl(var(--tag-workMode-Remote-fg))]',
     },
     Hybrid: {
-      bg: '[background-color:hsl(var(--tag-workMode-Hybrid-bg))]',
-      text: '[color:hsl(var(--tag-workMode-Hybrid-fg))]',
+      bg: 'bg-[hsl(var(--tag-workMode-Hybrid-bg))]',
+      text: 'text-[hsl(var(--tag-workMode-Hybrid-fg))]',
     },
     'On-site': {
-      bg: '[background-color:hsl(var(--tag-workMode-Onsite-bg))]',
-      text: '[color:hsl(var(--tag-workMode-Onsite-fg))]',
+      bg: 'bg-[hsl(var(--tag-workMode-Onsite-bg))]',
+      text: 'text-[hsl(var(--tag-workMode-Onsite-fg))]',
     },
   },
   employment: {
     'Full-time': {
-      bg: '[background-color:hsl(var(--tag-employment-FullTime-bg))]',
-      text: '[color:hsl(var(--tag-employment-FullTime-fg))]',
+      bg: 'bg-[hsl(var(--tag-employment-FullTime-bg))]',
+      text: 'text-[hsl(var(--tag-employment-FullTime-fg))]',
     },
     'Part-time': {
-      bg: '[background-color:hsl(var(--tag-employment-PartTime-bg))]',
-      text: '[color:hsl(var(--tag-employment-PartTime-fg))]',
+      bg: 'bg-[hsl(var(--tag-employment-PartTime-bg))]',
+      text: 'text-[hsl(var(--tag-employment-PartTime-fg))]',
     },
     Contract: {
-      bg: '[background-color:hsl(var(--tag-employment-Contract-bg))]',
-      text: '[color:hsl(var(--tag-employment-Contract-fg))]',
+      bg: 'bg-[hsl(var(--tag-employment-Contract-bg))]',
+      text: 'text-[hsl(var(--tag-employment-Contract-fg))]',
     },
     Freelance: {
-      bg: '[background-color:hsl(var(--tag-employment-Freelance-bg))]',
-      text: '[color:hsl(var(--tag-employment-Freelance-fg))]',
+      bg: 'bg-[hsl(var(--tag-employment-Freelance-bg))]',
+      text: 'text-[hsl(var(--tag-employment-Freelance-fg))]',
     },
     Internship: {
-      bg: '[background-color:hsl(var(--tag-employment-Internship-bg))]',
-      text: '[color:hsl(var(--tag-employment-Internship-fg))]',
+      bg: 'bg-[hsl(var(--tag-employment-Internship-bg))]',
+      text: 'text-[hsl(var(--tag-employment-Internship-fg))]',
     },
   },
   seniority: {
     Junior: {
-      bg: '[background-color:hsl(var(--tag-seniority-Junior-bg))]',
-      text: '[color:hsl(var(--tag-seniority-Junior-fg))]',
+      bg: 'bg-[hsl(var(--tag-seniority-Junior-bg))]',
+      text: 'text-[hsl(var(--tag-seniority-Junior-fg))]',
     },
     Mid: {
-      bg: '[background-color:hsl(var(--tag-seniority-Mid-bg))]',
-      text: '[color:hsl(var(--tag-seniority-Mid-fg))]',
+      bg: 'bg-[hsl(var(--tag-seniority-Mid-bg))]',
+      text: 'text-[hsl(var(--tag-seniority-Mid-fg))]',
     },
     Senior: {
-      bg: '[background-color:hsl(var(--tag-seniority-Senior-bg))]',
-      text: '[color:hsl(var(--tag-seniority-Senior-fg))]',
+      bg: 'bg-[hsl(var(--tag-seniority-Senior-bg))]',
+      text: 'text-[hsl(var(--tag-seniority-Senior-fg))]',
     },
     Staff: {
-      bg: '[background-color:hsl(var(--tag-seniority-Staff-bg))]',
-      text: '[color:hsl(var(--tag-seniority-Staff-fg))]',
+      bg: 'bg-[hsl(var(--tag-seniority-Staff-bg))]',
+      text: 'text-[hsl(var(--tag-seniority-Staff-fg))]',
     },
     Principal: {
-      bg: '[background-color:hsl(var(--tag-seniority-Principal-bg))]',
-      text: '[color:hsl(var(--tag-seniority-Principal-fg))]',
+      bg: 'bg-[hsl(var(--tag-seniority-Principal-bg))]',
+      text: 'text-[hsl(var(--tag-seniority-Principal-fg))]',
     },
   },
 }
 
 export const tagFallback: TagToken = {
-  bg: '[background-color:hsl(var(--tag-fallback-bg))]',
-  text: '[color:hsl(var(--tag-fallback-fg))]',
+  bg: 'bg-[hsl(var(--tag-fallback-bg))]',
+  text: 'text-[hsl(var(--tag-fallback-fg))]',
 }
 
 export function statusToken(status: keyof typeof statusTokens): StatusToken {

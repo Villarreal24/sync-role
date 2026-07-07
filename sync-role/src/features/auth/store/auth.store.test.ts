@@ -15,6 +15,7 @@ describe('AuthStore', () => {
       refreshToken: null,
       user: null,
       isAuthenticated: false,
+      profileHydrated: false,
     })
   })
 
@@ -71,5 +72,21 @@ describe('AuthStore', () => {
     useAuthStore.getState().setProfile('New Name', 'https://example.com/new.png')
     const state = useAuthStore.getState()
     expect(state.user).toBeNull()
+  })
+
+  it('starts with profileHydrated=false', () => {
+    expect(useAuthStore.getState().profileHydrated).toBe(false)
+  })
+
+  it('setAuth resets profileHydrated to false (new session)', () => {
+    useAuthStore.setState({ profileHydrated: true })
+    useAuthStore.getState().setAuth('t', 'r', mockUser)
+    expect(useAuthStore.getState().profileHydrated).toBe(false)
+  })
+
+  it('clearAuth resets profileHydrated to false', () => {
+    useAuthStore.setState({ profileHydrated: true })
+    useAuthStore.getState().clearAuth()
+    expect(useAuthStore.getState().profileHydrated).toBe(false)
   })
 })

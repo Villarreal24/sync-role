@@ -1,5 +1,7 @@
 from urllib.parse import urlencode
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import RedirectResponse
 
@@ -14,6 +16,8 @@ from syncRoleBackend.auth.schemas import (
 )
 from syncRoleBackend.config import settings
 from syncRoleBackend.database import get_supabase
+
+logger = logging.getLogger("sync_role.auth")
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -49,7 +53,7 @@ def _upsert_profile(sb, user_id: str, display_name: str, avatar_url: str) -> Non
             on_conflict="id",
         ).execute()
     except Exception as e:
-        print(f"  [AUTH] profile upsert failed for {user_id}: {e}")
+        logger.warning("profile upsert failed for %s: %s", user_id, e)
 
 
 def _build_google_redirect(result) -> RedirectResponse:

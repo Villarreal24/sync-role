@@ -61,7 +61,9 @@ export function useAuth() {
       // Best effort logout
     }
     clearAuth()
-    navigate({ to: '/auth' })
+    // replace: true so the browser back button doesn't take the
+    // user back to an authenticated screen.
+    navigate({ to: '/auth', replace: true })
   }, [token, clearAuth, navigate])
 
   const refreshAuth = useCallback(async () => {

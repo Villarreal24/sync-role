@@ -60,7 +60,7 @@ export const Route = createRootRoute({
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const user = useAuthStore((s) => s.user)
+  const profileHydrated = useAuthStore((s) => s.profileHydrated)
   const router = useRouter()
   const location = useLocation()
 
@@ -78,11 +78,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Hydrate profile (displayName + avatarUrl) once on first authenticated render
-    if (isAuthenticated && user && user.displayName === '' && user.avatarUrl === '') {
+    // Hydrate profile (displayName + avatarUrl) once per session.
+    // The profileHydrated flag is set in the hydrateProfile() finally
+    // block, so a 404 from the backend (e.g. user signed up via
+    // email/password with no profile row) still counts as hydrated
+    // and the guard doesn't loop re-fetching on every render.
+    if (isAuthenticated && !profileHydrated) {
       void useAuthStore.getState().hydrateProfile()
     }
-  }, [isAuthenticated, user, location.pathname, router])
+  }, [isAuthenticated, profileHydrated, location.pathname, router])
 
   return <>{children}</>
 }

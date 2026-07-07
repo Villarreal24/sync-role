@@ -1,4 +1,5 @@
 import json as _json
+import logging
 import time as _time
 from datetime import date as _date
 from typing import List
@@ -23,18 +24,25 @@ from syncRoleBackend.schemas import (
     _now_iso,
 )
 
+logger = logging.getLogger("sync_role")
+
 app = FastAPI(title="Sync Role API", version="1.0.0")
 
 _llm_client: OpenAI | None = None
 
-print(f"  [LLM]  Provider={settings.llm_provider!r}, "
-      f"Gemini={settings.gemini_model!r}, "
-      f"OpenAI={settings.openai_model!r}, "
-      f"Groq={settings.groq_model!r}")
-
-print(f"  [URLS] backend_url={settings.backend_url!r}")
-print(f"  [URLS] frontend_url={settings.frontend_url!r}")
-print(f"  [URLS] supabase_url={settings.supabase_url!r}")
+logger.info(
+    "Starting Sync Role API | provider=%s gemini=%s openai=%s groq=%s",
+    settings.llm_provider,
+    settings.gemini_model,
+    settings.openai_model,
+    settings.groq_model,
+)
+logger.info(
+    "URLs | backend=%s frontend=%s supabase=%s",
+    settings.backend_url,
+    settings.frontend_url,
+    settings.supabase_url,
+)
 
 
 def _get_llm_client() -> OpenAI:
@@ -216,21 +224,24 @@ _RETRY_EXHAUSTED_MSG = (
 
 @app.post("/api/v1/scrape", response_model=ScrapeResponse)
 async def scrape_job(req: ScrapeRequest, request: Request):
-    print(f"  [SCRAPE] POST /api/v1/scrape — url={req.url[:80]!r}, "
-          f"page_content_len={len(req.page_content)}, "
-          f"origin={request.headers.get('origin', 'none')!r}, "
-          f"provider={settings.llm_provider!r}")
+    logger.info(
+        "scrape request url=%r len=%d origin=%r provider=%s",
+        req.url[:80],
+        len(req.page_content),
+        request.headers.get("origin", "none"),
+        settings.llm_provider,
+    )
 
     if len(req.page_content) > _MAX_PAGE_CONTENT_CHARS:
         truncated = req.page_content[:_MAX_PAGE_CONTENT_CHARS]
-        print(f"  [SCRAPE] Truncating page_content {len(req.page_content)} -> "
-              f"{_MAX_PAGE_CONTENT_CHARS} chars")
+        logger.info("truncating page_content %d -> %d chars",
+                    len(req.page_content), _MAX_PAGE_CONTENT_CHARS)
         req = req.model_copy(update={"page_content": truncated})
 
     try:
         client = _get_llm_client()
     except ValueError as e:
-        print(f"  [SCRAPE] Config error: {e}")
+        logger.error("LLM config error: %s", e)
         raise HTTPException(
             status_code=501,
             detail=str(e),
@@ -243,25 +254,27 @@ async def scrape_job(req: ScrapeRequest, request: Request):
                 raw = _call_llm(client, req, max_tokens)
                 data = _extract_data(raw)
             except _json.JSONDecodeError:
-                print(f"  [SCRAPE] JSON decode error with max_tokens={max_tokens}, retrying...")
+                logger.warning("JSON decode error with max_tokens=%d, retrying", max_tokens)
                 last_error = _RETRY_EXHAUSTED_MSG
                 break
             except RateLimitError as e:
-                print(f"  [SCRAPE] Rate limited (attempt {attempt + 1}), "
-                      f"retrying in {backoff}s...")
+                logger.warning(
+                    "rate limited (attempt %d), retrying in %ss",
+                    attempt + 1, backoff,
+                )
                 last_error = f"LLM rate limited: {e.response.headers.get('x-ratelimit-remaining', 'N/A')}"
                 if attempt < len(_RETRY_BACKOFF) - 1:
                     _time.sleep(backoff)
                     continue
                 break
             except Exception as e:
-                print(f"  [SCRAPE] LLM call failed: {e}")
+                logger.error("LLM call failed: %s", e)
                 raise HTTPException(
                     status_code=502, detail=f"LLM call failed: {str(e)}"
                 )
             else:
-                print(f"  [SCRAPE] Success — title={data.get('title', '')!r}, "
-                      f"company={data.get('company', '')!r}")
+                logger.info("scrape success title=%r company=%r",
+                            data.get("title", ""), data.get("company", ""))
                 return ScrapeResponse(
                     title=data.get("title", ""),
                     company=data.get("company", ""),
@@ -277,7 +290,7 @@ async def scrape_job(req: ScrapeRequest, request: Request):
                     technologies=data.get("technologies", []),
                 )
 
-    print(f"  [SCRAPE] Exhausted all retries: {last_error}")
+    logger.error("scrape exhausted all retries: %s", last_error)
     raise HTTPException(status_code=502, detail=last_error or _RETRY_EXHAUSTED_MSG)
 
 

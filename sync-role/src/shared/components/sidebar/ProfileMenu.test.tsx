@@ -88,13 +88,15 @@ describe('ProfileMenu', () => {
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
   })
 
-  it('calls logout and navigates to /auth when Log out is clicked', async () => {
+  it('calls logout when Log out is clicked (logout handles the redirect)', async () => {
     const user = userEvent.setup()
     mockLogout.mockResolvedValue(undefined)
     renderMenu()
     await user.click(screen.getByText('Open menu'))
     await user.click(screen.getByText('Log out'))
+    // logout() in use-auth.ts owns the navigation to /auth with
+    // replace: true. ProfileMenu just delegates to it.
     expect(mockLogout).toHaveBeenCalled()
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/auth', replace: true })
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
