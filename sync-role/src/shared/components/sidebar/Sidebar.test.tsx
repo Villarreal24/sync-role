@@ -60,12 +60,13 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
   })
 
-  it('renders collapsed with nav items but no brand name', () => {
+  it('renders collapsed with nav items and the brand logo in the header', () => {
     useSidebarStore.setState({ collapsed: true })
     renderSidebar()
-    const brand = screen.queryByText('Sync Role')
-    expect(brand).toBeInTheDocument()
-    expect(brand?.closest('div')).toHaveClass('hidden')
+    // The brand text is no longer rendered when collapsed; the logo
+    // carries the brand identity via its aria-label.
+    expect(screen.queryByText('Sync Role')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Sync Role' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument()
   })
 
