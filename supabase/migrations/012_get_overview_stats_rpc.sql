@@ -49,7 +49,7 @@ BEGIN
   FROM job_postings
   WHERE user_id = p_user_id;
 
-  -- 3) Top 5 technologies (unnest the array and count)
+  -- 3) Top 8 technologies (unnest the array and count)
   SELECT COALESCE(json_agg(row ORDER BY row.count DESC), '[]'::json) INTO v_top_tech
   FROM (
     SELECT json_build_object('name', t.technology, 'count', COUNT(*)::int) AS row
@@ -57,7 +57,7 @@ BEGIN
     WHERE user_id = p_user_id AND t.technology <> ''
     GROUP BY t.technology
     ORDER BY COUNT(*) DESC
-    LIMIT 5
+    LIMIT 8
   ) sub;
 
   -- 4) Top 3 work_modes

@@ -1,6 +1,7 @@
--- Migration 014: rewrite the top-N subqueries so json_agg can
--- ORDER BY scalar columns (the previous version used a json alias
--- which Postgres can't sort on).
+-- Migration 015: bump the Top Tecnologías LIMIT from 5 to 8.
+-- The Top Tecnologías list was leaving a visible gap next to the
+-- Actividad chart because the chart column is taller than 5 rows
+-- of bar items. Bumping to 8 fills the available space.
 
 CREATE OR REPLACE FUNCTION get_overview_stats(p_user_id UUID)
 RETURNS JSON
@@ -47,7 +48,7 @@ BEGIN
   FROM job_postings
   WHERE user_id = p_user_id;
 
-  -- 3) Top 8 technologies — sort on scalar columns, then build JSON
+  -- 3) Top 8 technologies
   SELECT COALESCE(json_agg(json_build_object('name', name, 'count', count)), '[]'::json)
     INTO v_top_tech
   FROM (
@@ -83,7 +84,7 @@ BEGIN
     LIMIT 3
   ) sub;
 
-  -- 6) Activity: last 8 weeks, weeks with 0 events filled by generate_series
+  -- 6) Activity
   SELECT COALESCE(json_agg(json_build_object('week_start', week_start, 'count', count) ORDER BY week_start), '[]'::json)
     INTO v_activity
   FROM (
@@ -101,7 +102,6 @@ BEGIN
     GROUP BY gs.week_start
   ) sub;
 
-  -- 7) Final assembly
   RETURN json_build_object(
     'totals',           v_totals,
     'funnel',           v_funnel,
