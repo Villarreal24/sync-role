@@ -45,7 +45,7 @@ function CollapsedHeader({ onToggle }: { onToggle: () => void }) {
           onBlur={() => setIsHovered(false)}
           aria-label="Open sidebar"
           data-testid="sidebar-collapse-toggle"
-          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
         >
           {isHovered ? (
             <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
