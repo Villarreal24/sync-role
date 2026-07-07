@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Overview } from '@/features/overview'
 
 export const Route = createFileRoute('/_authenticated/')({
-  component: Overview,
+  component: OverviewRoute,
 })
 
-function Overview() {
+function OverviewRoute() {
   return (
     <div className="mx-auto px-4 py-8">
       <header className="mb-8">
@@ -13,11 +14,7 @@ function Overview() {
           A summary of your job applications and activity.
         </p>
       </header>
-      <div className="rounded-lg border border-dashed border-border bg-card/50 p-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          Dashboard metrics coming soon.
-        </p>
-      </div>
+      <Overview />
     </div>
   )
 }
