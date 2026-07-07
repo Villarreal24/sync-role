@@ -44,13 +44,12 @@ describe('design-tokens', () => {
     expect(color.input).toBe('bg-input')
   })
 
-  it('statusTokens has all 5 statuses with bg, text and label', () => {
+  it('statusTokens has all 5 statuses with bg and text', () => {
     const statuses = ['saved', 'applied', 'interviewing', 'rejected', 'offer'] as const
     for (const s of statuses) {
       const t = statusTokens[s]
       expect(t.bg).toBeTruthy()
       expect(t.text).toBeTruthy()
-      expect(t.label).toBeTruthy()
     }
   })
 
@@ -60,9 +59,9 @@ describe('design-tokens', () => {
     expect(tagTokens.seniority.Mid).toBeTruthy()
   })
 
-  it('statusToken returns the expected token', () => {
-    expect(statusToken('applied').label).toBe('Applied')
-    expect(statusToken('offer').label).toBe('Offer')
+  it('statusToken returns the expected token (bg and text only — label moved to features/jobs/copy.ts)', () => {
+    expect(statusToken('applied').bg).toContain('--status-applied-bg')
+    expect(statusToken('offer').bg).toContain('--status-offer-bg')
   })
 
   it('tagToken returns the expected token for known values', () => {

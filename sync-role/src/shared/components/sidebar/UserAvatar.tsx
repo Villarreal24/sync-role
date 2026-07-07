@@ -3,13 +3,14 @@ import { useMounted } from '@/shared/hooks/use-mounted'
 import { cn } from '@/shared/lib/utils'
 
 interface UserAvatarProps {
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
 const sizeMap = {
   sm: 'h-8 w-8 text-xs',
   md: 'h-10 w-10 text-sm',
+  lg: 'h-20 w-20 text-2xl',
 }
 
 function initialsFromEmail(email: string): string {

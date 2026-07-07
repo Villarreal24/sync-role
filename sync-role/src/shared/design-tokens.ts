@@ -38,10 +38,14 @@ export const color = {
   input: 'bg-input',
 } as const
 
+/**
+ * `label` was removed: it's a user-facing string, not a token, so it
+ * lives in features/jobs/copy.ts (statusLabels) so it can be translated.
+ * StatusToken now only carries the visual classes (bg / text).
+ */
 export type StatusToken = {
   bg: string
   text: string
-  label: string
 }
 
 /**
@@ -63,27 +67,22 @@ export const statusTokens: Record<'saved' | 'applied' | 'interviewing' | 'reject
   saved: {
     bg: 'bg-[hsl(var(--status-saved-bg))]',
     text: 'text-[hsl(var(--status-saved-fg))]',
-    label: 'Saved',
   },
   applied: {
     bg: 'bg-[hsl(var(--status-applied-bg))]',
     text: 'text-[hsl(var(--status-applied-fg))]',
-    label: 'Applied',
   },
   interviewing: {
     bg: 'bg-[hsl(var(--status-interviewing-bg))]',
     text: 'text-[hsl(var(--status-interviewing-fg))]',
-    label: 'Interviewing',
   },
   rejected: {
     bg: 'bg-[hsl(var(--status-rejected-bg))]',
     text: 'text-[hsl(var(--status-rejected-fg))]',
-    label: 'Rejected',
   },
   offer: {
     bg: 'bg-[hsl(var(--status-offer-bg))]',
     text: 'text-[hsl(var(--status-offer-fg))]',
-    label: 'Offer',
   },
 }
 

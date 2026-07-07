@@ -1,5 +1,6 @@
 import { useJobsQuery } from '../hooks/use-jobs'
 import { useJobFiltersStore } from '../store/job.store'
+import { useJobsCopy } from '../copy'
 import { KanbanColumn } from './KanbanColumn'
 import type { JobStatus } from '../types'
 import { Search } from 'lucide-react'
@@ -7,15 +8,10 @@ import { Input } from '@/shared/components/ui/input'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
 
-const columns: { status: JobStatus; title: string }[] = [
-  { status: 'saved', title: 'Saved' },
-  { status: 'applied', title: 'Applied' },
-  { status: 'interviewing', title: 'Interviewing' },
-  { status: 'rejected', title: 'Rejected' },
-  { status: 'offer', title: 'Offer' },
-]
+const STATUSES: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
 export function JobBoard() {
+  const copy = useJobsCopy()
   const { data: jobs, isLoading, error } = useJobsQuery()
   const searchQuery = useJobFiltersStore((s) => s.searchQuery)
   const statusFilter = useJobFiltersStore((s) => s.statusFilter)
@@ -41,10 +37,8 @@ export function JobBoard() {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Failed to load jobs</AlertTitle>
-        <AlertDescription>
-          Make sure the backend server is running.
-        </AlertDescription>
+        <AlertTitle>{copy.board.errorTitle}</AlertTitle>
+        <AlertDescription>{copy.board.errorDescription}</AlertDescription>
       </Alert>
     )
   }
@@ -69,7 +63,7 @@ export function JobBoard() {
           />
           <Input
             type="text"
-            placeholder="Search by title or company..."
+            placeholder={copy.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -78,12 +72,12 @@ export function JobBoard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {columns.map((col) => (
+        {STATUSES.map((status) => (
           <KanbanColumn
-            key={col.status}
-            status={col.status}
-            title={col.title}
-            jobs={filteredJobs.filter((j) => j.status === col.status)}
+            key={status}
+            status={status}
+            title={copy.statusLabels[status]}
+            jobs={filteredJobs.filter((j) => j.status === status)}
           />
         ))}
       </div>

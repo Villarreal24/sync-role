@@ -13,6 +13,8 @@ from syncRoleBackend.auth.middleware import AuthMiddleware
 from syncRoleBackend.auth.router import router as auth_router
 from syncRoleBackend.config import settings
 from syncRoleBackend.profiles.router import router as profiles_router
+from syncRoleBackend.stats.queries import invalidate_overview_stats_cache
+from syncRoleBackend.stats.router import router as stats_router
 from syncRoleBackend.database import get_supabase
 from syncRoleBackend.schemas import (
     JobPostingCreate,
@@ -91,6 +93,9 @@ app.include_router(auth_router)
 # Mount profiles routes
 app.include_router(profiles_router)
 
+# Mount stats routes
+app.include_router(stats_router)
+
 
 def _db_for_user(token: str | None) -> Client:
     """Get a supabase client scoped to the user's JWT for RLS enforcement.
@@ -128,6 +133,8 @@ async def create_job(job: JobPostingCreate, request: Request):
     payload["created_at"] = _now_iso()
 
     result = _db_for_user(request.state.token).table("job_postings").insert(payload).execute()
+    # The application_events trigger writes the initial event automatically.
+    invalidate_overview_stats_cache(request.state.user_id)
     return JobPostingResponse.from_db_row(result.data[0])
 
 
@@ -147,6 +154,8 @@ async def update_job(job_id: str, job_update: JobPostingUpdate, request: Request
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")
+    # If status changed, the trigger wrote an event; clear cache.
+    invalidate_overview_stats_cache(request.state.user_id)
     return JobPostingResponse.from_db_row(result.data[0])
 
 
@@ -300,4 +309,6 @@ async def delete_job(job_id: str, request: Request):
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")
+    # ON DELETE CASCADE removes the related application_events rows.
+    invalidate_overview_stats_cache(request.state.user_id)
     return {"message": "Job deleted successfully"}

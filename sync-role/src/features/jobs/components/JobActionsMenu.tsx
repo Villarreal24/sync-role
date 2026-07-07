@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { MoreHorizontal, ExternalLink, Trash2 } from 'lucide-react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
+import { useJobsCopy } from '../copy'
 import type { JobStatus, JobPosting } from '../types'
-import { statusToken } from '@/shared/design-tokens'
 import { Button } from '@/shared/components/ui/button'
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ interface JobActionsMenuProps {
 }
 
 export function JobActionsMenu({ job }: JobActionsMenuProps) {
+  const copy = useJobsCopy()
   const [open, setOpen] = useState(false)
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
@@ -32,7 +33,7 @@ export function JobActionsMenu({ job }: JobActionsMenuProps) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Open menu"
+          aria-label={copy.actions.openMenu}
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
         >
           <MoreHorizontal size={16} />
@@ -47,18 +48,18 @@ export function JobActionsMenu({ job }: JobActionsMenuProps) {
             className="flex items-center gap-2"
           >
             <ExternalLink className="h-4 w-4" />
-            View source
+            {copy.actions.viewSource}
           </a>
         </DropdownMenuItem>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Change status</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>{copy.actions.changeStatus}</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             {statusValues.map((value) => (
               <DropdownMenuItem
                 key={value}
                 onSelect={() => updateStatus.mutate({ id: job.id, status: value })}
               >
-                {statusToken(value).label}
+                {copy.statusLabels[value]}
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>
@@ -69,7 +70,7 @@ export function JobActionsMenu({ job }: JobActionsMenuProps) {
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
-          Delete
+          {copy.actions.delete}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

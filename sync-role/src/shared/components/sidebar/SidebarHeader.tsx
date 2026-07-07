@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/
 import { Button } from '@/shared/components/ui/button'
 import { SyncRoleLogo } from '@/shared/components/brand/SyncRoleLogo'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
+import { useSidebarCopy } from './copy'
 import { cn } from '@/shared/lib/utils'
 
 export function SidebarHeader() {
@@ -31,6 +32,7 @@ function CollapsedHeader({ onToggle }: { onToggle: () => void }) {
   // wraps the SVG in a background container, so a CSS hide on the inner
   // SVG still leaves the white box visible. With state we can swap the
   // whole node (background and all) in a single render.
+  const copy = useSidebarCopy()
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -43,7 +45,7 @@ function CollapsedHeader({ onToggle }: { onToggle: () => void }) {
           onMouseLeave={() => setIsHovered(false)}
           onFocus={() => setIsHovered(true)}
           onBlur={() => setIsHovered(false)}
-          aria-label="Open sidebar"
+          aria-label={copy.header.openSidebar}
           data-testid="sidebar-collapse-toggle"
           className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
         >
@@ -54,12 +56,13 @@ function CollapsedHeader({ onToggle }: { onToggle: () => void }) {
           )}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">Open sidebar</TooltipContent>
+      <TooltipContent side="right">{copy.header.openSidebar}</TooltipContent>
     </Tooltip>
   )
 }
 
 function ExpandedHeader({ onToggle }: { onToggle: () => void }) {
+  const copy = useSidebarCopy()
   return (
     <>
       <div className="flex items-center gap-2">
@@ -72,14 +75,14 @@ function ExpandedHeader({ onToggle }: { onToggle: () => void }) {
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            aria-label="Close sidebar"
+            aria-label={copy.header.closeSidebar}
             data-testid="sidebar-collapse-toggle"
             className="text-muted-foreground"
           >
             <PanelLeftClose className="h-5 w-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">Close sidebar</TooltipContent>
+        <TooltipContent side="right">{copy.header.closeSidebar}</TooltipContent>
       </Tooltip>
     </>
   )
