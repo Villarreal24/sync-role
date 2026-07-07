@@ -1,6 +1,7 @@
 """Tests for auth module: registration, login, JWT middleware, protected routes."""
 
 import time
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
@@ -385,3 +386,154 @@ class TestDualClient:
             c2 = get_supabase("service_role")
             mock_create.assert_called_once()  # Only called once
             assert c1 is c2  # Same cached instance
+
+
+# ===== GOOGLE OAUTH CALLBACK TESTS =====
+
+
+class TestGoogleCallback:
+    """Tests for /api/v1/auth/google/callback: extracts display_name
+    and avatar_url from the Supabase user_metadata, upserts the
+    profiles row, and includes both fields in the redirect URL."""
+
+    def _make_user(self, user_metadata: dict, user_id: str = "u-google-1",
+                   email: str = "luis@gmail.com"):
+        user = MagicMock()
+        user.id = user_id
+        user.email = email
+        user.user_metadata = user_metadata
+        return user
+
+    def _make_session(self, access_token: str = "google-at",
+                      refresh_token: str = "google-rt"):
+        session = MagicMock()
+        session.access_token = access_token
+        session.refresh_token = refresh_token
+        return session
+
+    def _make_exchange_result(self, user, session):
+        result = MagicMock()
+        result.user = user
+        result.session = session
+        return result
+
+    def test_extracts_full_name_and_avatar_from_google_metadata(self):
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({
+            "full_name": "Luis Villarreal",
+            "avatar_url": "https://lh3.googleusercontent.com/luis.png",
+            "email": "luis@gmail.com",
+            "iss": "https://accounts.google.com",
+        })
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
+             patch("syncRoleBackend.auth.router.settings") as mock_settings:
+            mock_get_sb.return_value = MagicMock()
+            mock_settings.backend_url = "https://api.example.com"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            redirect = _build_google_redirect(result)
+
+        qs = parse_qs(urlparse(redirect.headers["location"]).query)
+        assert qs["display_name"] == ["Luis Villarreal"]
+        assert qs["avatar_url"] == ["https://lh3.googleusercontent.com/luis.png"]
+        assert qs["user_id"] == ["u-google-1"]
+        assert qs["email"] == ["luis@gmail.com"]
+        assert qs["access_token"] == ["google-at"]
+        assert qs["refresh_token"] == ["google-rt"]
+
+    def test_falls_back_to_name_field_when_full_name_missing(self):
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({"name": "Luis V", "picture": "https://x/luis.png"})
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
+             patch("syncRoleBackend.auth.router.settings") as mock_settings:
+            mock_get_sb.return_value = MagicMock()
+            mock_settings.backend_url = "https://api.example.com"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            redirect = _build_google_redirect(result)
+
+        qs = parse_qs(urlparse(redirect.headers["location"]).query)
+        assert qs["display_name"] == ["Luis V"]
+        assert qs["avatar_url"] == ["https://x/luis.png"]
+
+    def test_upserts_profiles_row_with_google_data(self):
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({
+            "full_name": "Luis V",
+            "avatar_url": "https://x/luis.png",
+        }, user_id="user-xyz")
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
+             patch("syncRoleBackend.auth.router.settings") as mock_settings:
+            mock_sb = MagicMock()
+            mock_get_sb.return_value = mock_sb
+            mock_settings.backend_url = "https://api.example.com"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            _build_google_redirect(result)
+
+        mock_sb.table.assert_called_once_with("profiles")
+        upsert_call = mock_sb.table.return_value.upsert.call_args
+        assert upsert_call.args[0] == {
+            "id": "user-xyz",
+            "display_name": "Luis V",
+            "avatar_url": "https://x/luis.png",
+        }
+        assert upsert_call.kwargs == {"on_conflict": "id"}
+
+    def test_profile_upsert_failure_does_not_break_auth_flow(self):
+        """If the profiles table write fails (RLS, network, etc.),
+        the redirect must still go out so the user can sign in."""
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({"full_name": "Luis", "avatar_url": "https://x"})
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
+             patch("syncRoleBackend.auth.router.settings") as mock_settings:
+            mock_sb = MagicMock()
+            mock_sb.table.return_value.upsert.side_effect = RuntimeError("db down")
+            mock_get_sb.return_value = mock_sb
+            mock_settings.backend_url = "https://api.example.com"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            redirect = _build_google_redirect(result)
+
+        # The redirect must still happen despite the upsert failure
+        qs = parse_qs(urlparse(redirect.headers["location"]).query)
+        assert qs["user_id"] == ["u-google-1"]
+        assert qs["display_name"] == ["Luis"]
+
+    def test_empty_metadata_yields_empty_profile_fields(self):
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({})  # no name, no avatar
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
+             patch("syncRoleBackend.auth.router.settings") as mock_settings:
+            mock_get_sb.return_value = MagicMock()
+            mock_settings.backend_url = "https://api.example.com"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            redirect = _build_google_redirect(result)
+
+        # keep_blank_values so we can assert the URL really carries
+        # display_name= and avatar_url= (not just omits them).
+        qs = parse_qs(urlparse(redirect.headers["location"]).query,
+                      keep_blank_values=True)
+        assert qs["display_name"] == [""]
+        assert qs["avatar_url"] == [""]

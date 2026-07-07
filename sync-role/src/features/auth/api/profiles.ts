@@ -43,24 +43,11 @@ function toProfile(row: ProfileResponse): Profile {
  * returns 404 in that case).
  */
 export async function getProfile(): Promise<Profile | null> {
-  // eslint-disable-next-line no-console
-  console.log('[getProfile] fetching /profiles/me...')
   try {
     const data = await apiClient.get<ProfileResponse>('/profiles/me')
-    // eslint-disable-next-line no-console
-    console.log('[getProfile] raw response:', data)
-    const profile = toProfile(data)
-    // eslint-disable-next-line no-console
-    console.log('[getProfile] mapped profile:', profile)
-    return profile
+    return toProfile(data)
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      // eslint-disable-next-line no-console
-      console.log('[getProfile] 404 — no profile row yet')
-      return null
-    }
-    // eslint-disable-next-line no-console
-    console.error('[getProfile] error:', err)
+    if (err instanceof ApiError && err.status === 404) return null
     throw err
   }
 }

@@ -72,14 +72,23 @@ describe('AuthPage', () => {
     expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument()
   })
 
-  it('captures access_token, refresh_token, user_id and email from URL params and calls setAuth + navigate', () => {
-    window.history.replaceState({}, '', '/auth?access_token=at&refresh_token=rt&user_id=u1&email=a%40b.com')
+  it('captures access_token, refresh_token, user_id, email, display_name and avatar_url from URL params', () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/auth?access_token=at&refresh_token=rt&user_id=u1&email=a%40b.com&display_name=Luis%20Villarreal&avatar_url=https%3A%2F%2Fexample.com%2Fme.png',
+    )
     render(<AuthPage />)
 
     const state = useAuthStore.getState()
     expect(state.token).toBe('at')
     expect(state.refreshToken).toBe('rt')
-    expect(state.user).toEqual({ id: 'u1', email: 'a@b.com', displayName: '', avatarUrl: '' })
+    expect(state.user).toEqual({
+      id: 'u1',
+      email: 'a@b.com',
+      displayName: 'Luis Villarreal',
+      avatarUrl: 'https://example.com/me.png',
+    })
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
     expect(window.location.search).toBe('')
   })

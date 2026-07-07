@@ -42,9 +42,6 @@ export function UserAvatar({ size = 'md', className }: UserAvatarProps) {
   const avatarUrl = mounted ? (user?.avatarUrl ?? '') : ''
   const email = mounted ? (user?.email ?? '') : ''
 
-  // eslint-disable-next-line no-console
-  console.log('[UserAvatar]', { mounted, user, displayName, avatarUrl, email })
-
   const initials = displayName
     ? initialsFromDisplayName(displayName)
     : email

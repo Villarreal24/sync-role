@@ -124,13 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrateProfile: async () => {
     const { getProfile } = await import('../api/profiles')
     const profile = await getProfile()
-    if (!profile) {
-      // eslint-disable-next-line no-console
-      console.log('[hydrateProfile] no profile, leaving defaults')
-      return
-    }
-    // eslint-disable-next-line no-console
-    console.log('[hydrateProfile] setting profile:', { displayName: profile.displayName, avatarUrl: profile.avatarUrl })
+    if (!profile) return
     useAuthStore.getState().setProfile(profile.displayName, profile.avatarUrl)
   },
 }))
