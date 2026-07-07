@@ -24,29 +24,34 @@ describe('SidebarHeader', () => {
     expect(screen.getByRole('button', { name: 'Close sidebar' })).toBeInTheDocument()
   })
 
-  it('renders the brand logo and a hover-swap open button when collapsed', () => {
+  it('renders the brand logo by default when collapsed', () => {
     useSidebarStore.setState({ collapsed: true })
     renderHeader()
     const trigger = screen.getByRole('button', { name: 'Open sidebar' })
-    expect(trigger).toBeInTheDocument()
-    // The brand logo and the open icon both live inside the trigger
+    // Logo visible, chevron not rendered
     expect(trigger.querySelector('svg[aria-label="Sync Role"]')).toBeInTheDocument()
-    expect(trigger.querySelector('svg.lucide-panel-left-open')).toBeInTheDocument()
+    expect(trigger.querySelector('svg.lucide-panel-left-open')).not.toBeInTheDocument()
   })
 
-  it('shows the logo by default and the chevron on hover when collapsed', () => {
+  it('swaps the brand logo for the open chevron on hover when collapsed', async () => {
     useSidebarStore.setState({ collapsed: true })
+    const user = userEvent.setup()
     renderHeader()
     const trigger = screen.getByRole('button', { name: 'Open sidebar' })
-    // SVG elements expose className as an SVGAnimatedString; use
-    // getAttribute('class') to get a plain string for assertions.
-    const logo = trigger.querySelector('svg[aria-label="Sync Role"]')!
-    const chevron = trigger.querySelector('svg.lucide-panel-left-open')!
 
-    // Default: logo visible, chevron hidden via Tailwind group-hover swap
-    expect(logo.getAttribute('class')).toContain('group-hover:hidden')
-    expect(chevron.getAttribute('class')).toContain('hidden')
-    expect(chevron.getAttribute('class')).toContain('group-hover:block')
+    // Before hover: logo
+    expect(trigger.querySelector('svg[aria-label="Sync Role"]')).toBeInTheDocument()
+    expect(trigger.querySelector('svg.lucide-panel-left-open')).not.toBeInTheDocument()
+
+    // After hover: chevron, logo gone (whole node, not just SVG)
+    await user.hover(trigger)
+    expect(trigger.querySelector('svg[aria-label="Sync Role"]')).not.toBeInTheDocument()
+    expect(trigger.querySelector('svg.lucide-panel-left-open')).toBeInTheDocument()
+
+    // After un-hover: back to logo
+    await user.unhover(trigger)
+    expect(trigger.querySelector('svg[aria-label="Sync Role"]')).toBeInTheDocument()
+    expect(trigger.querySelector('svg.lucide-panel-left-open')).not.toBeInTheDocument()
   })
 
   it('toggles collapsed state when the close button is clicked (expanded)', async () => {

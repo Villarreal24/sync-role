@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { Button } from '@/shared/components/ui/button'
@@ -17,53 +18,69 @@ export function SidebarHeader() {
       )}
     >
       {collapsed ? (
-        // Collapsed: show the brand logo by default. On hover, swap to
-        // the "open sidebar" chevron. The whole area is a single
-        // button so clicking anywhere (logo or chevron) expands.
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label="Open sidebar"
-              data-testid="sidebar-collapse-toggle"
-              className="group flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
-            >
-              <SyncRoleLogo
-                size="sm"
-                withBackground
-                className="group-hover:hidden"
-                ariaLabel="Sync Role"
-              />
-              <PanelLeftOpen className="hidden h-5 w-5 text-muted-foreground group-hover:block group-hover:text-foreground" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Open sidebar</TooltipContent>
-        </Tooltip>
+        <CollapsedHeader onToggle={toggle} />
       ) : (
-        // Expanded: brand on the left, close button on the right.
-        <>
-          <div className="flex items-center gap-2">
-            <SyncRoleLogo size="md" withBackground ariaLabel="Sync Role" />
-            <span className="text-base font-semibold tracking-tight">Sync Role</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggle}
-                aria-label="Close sidebar"
-                data-testid="sidebar-collapse-toggle"
-                className="text-muted-foreground"
-              >
-                <PanelLeftClose className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Close sidebar</TooltipContent>
-          </Tooltip>
-        </>
+        <ExpandedHeader onToggle={toggle} />
       )}
     </div>
+  )
+}
+
+function CollapsedHeader({ onToggle }: { onToggle: () => void }) {
+  // Conditional render instead of CSS group-hover swap: the SyncRoleLogo
+  // wraps the SVG in a background container, so a CSS hide on the inner
+  // SVG still leaves the white box visible. With state we can swap the
+  // whole node (background and all) in a single render.
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onToggle}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onFocus={() => setIsHovered(true)}
+          onBlur={() => setIsHovered(false)}
+          aria-label="Open sidebar"
+          data-testid="sidebar-collapse-toggle"
+          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+        >
+          {isHovered ? (
+            <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <SyncRoleLogo size="sm" withBackground ariaLabel="Sync Role" />
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">Open sidebar</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function ExpandedHeader({ onToggle }: { onToggle: () => void }) {
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <SyncRoleLogo size="md" withBackground ariaLabel="Sync Role" />
+        <span className="text-base font-semibold tracking-tight">Sync Role</span>
+      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            aria-label="Close sidebar"
+            data-testid="sidebar-collapse-toggle"
+            className="text-muted-foreground"
+          >
+            <PanelLeftClose className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Close sidebar</TooltipContent>
+      </Tooltip>
+    </>
   )
 }
