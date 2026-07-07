@@ -1,8 +1,10 @@
 import type { Locale } from '@/shared/copy/locale'
 import { useLocale } from '@/shared/copy/locale'
 import { COMMON_COPY_EN, COMMON_COPY_ES, type CommonCopy } from '@/shared/copy/common'
+import type { JobStatus } from './types'
 
 export interface JobsCopy {
+  statusLabels: Record<JobStatus, string>
   common: { search: string; noJobs: string }
   searchPlaceholder: string
   board: { errorTitle: string; errorDescription: string }
@@ -31,6 +33,13 @@ export interface JobsCopy {
 
 function makeJobsCopy(common: CommonCopy): JobsCopy {
   return {
+    statusLabels: {
+      saved: 'Saved',
+      applied: 'Applied',
+      interviewing: 'Interviewing',
+      rejected: 'Rejected',
+      offer: 'Offer',
+    },
     common: { search: common.search, noJobs: 'No jobs yet' },
     searchPlaceholder: 'Search by title or company...',
     board: {
@@ -63,6 +72,13 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
 
 function makeJobsCopyEs(common: CommonCopy): JobsCopy {
   return {
+    statusLabels: {
+      saved: 'Guardada',
+      applied: 'Postulada',
+      interviewing: 'En entrevista',
+      rejected: 'Rechazada',
+      offer: 'Oferta',
+    },
     common: { search: common.search, noJobs: 'No hay postulaciones aún' },
     searchPlaceholder: 'Buscar por título o empresa...',
     board: {

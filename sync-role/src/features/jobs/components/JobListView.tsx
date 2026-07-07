@@ -113,6 +113,7 @@ export function JobListView() {
             ) : (
               filteredJobs.map((job) => {
                 const status = statusToken(job.status)
+                const label = copy.statusLabels[job.status]
                 const date = formatPublishDate(job.publishedAt)
                 const dateCell = date.isExact ? (
                   <Tooltip>
@@ -143,7 +144,7 @@ export function JobListView() {
                           status.text,
                         )}
                       >
-                        {status.label}
+                        {label}
                       </Badge>
                     </TableCell>
                     <TableCell className={spacing.tableCell}>

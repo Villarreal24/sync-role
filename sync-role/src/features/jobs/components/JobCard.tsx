@@ -59,7 +59,7 @@ export function JobCard({ job }: Props) {
               status.text,
             )}
           >
-            {status.label}
+            {copy.statusLabels[job.status]}
           </Badge>
         </div>
       </CardHeader>
@@ -142,7 +142,7 @@ export function JobCard({ job }: Props) {
           <SelectContent>
             {statusValues.map((value) => (
               <SelectItem key={value} value={value} className={fontSize.caption}>
-                {statusToken(value).label}
+                {copy.statusLabels[value]}
               </SelectItem>
             ))}
           </SelectContent>

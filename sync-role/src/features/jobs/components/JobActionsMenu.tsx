@@ -3,7 +3,6 @@ import { MoreHorizontal, ExternalLink, Trash2 } from 'lucide-react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import { useJobsCopy } from '../copy'
 import type { JobStatus, JobPosting } from '../types'
-import { statusToken } from '@/shared/design-tokens'
 import { Button } from '@/shared/components/ui/button'
 import {
   DropdownMenu,
@@ -60,7 +59,7 @@ export function JobActionsMenu({ job }: JobActionsMenuProps) {
                 key={value}
                 onSelect={() => updateStatus.mutate({ id: job.id, status: value })}
               >
-                {statusToken(value).label}
+                {copy.statusLabels[value]}
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>
