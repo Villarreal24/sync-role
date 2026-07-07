@@ -24,12 +24,12 @@ export function OverviewSkeleton() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <Skeleton className="h-5 w-48" />
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-5 w-28 shrink-0" />
                 <Skeleton className="h-2 flex-1" />
-                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-5 w-8 shrink-0" />
               </div>
             ))}
           </div>
