@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react'
 import { useJobsQuery } from '../hooks/use-jobs'
 import { useJobFiltersStore } from '../store/job.store'
+import { useJobsCopy } from '../copy'
 import { JobActionsMenu } from './JobActionsMenu'
 import { statusToken, fontSize, spacing } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
@@ -22,6 +23,7 @@ import {
 } from '@/shared/components/ui/table'
 
 export function JobListView() {
+  const copy = useJobsCopy()
   const { data: jobs, isLoading, error } = useJobsQuery()
   const searchQuery = useJobFiltersStore((s) => s.searchQuery)
   const statusFilter = useJobFiltersStore((s) => s.statusFilter)
@@ -45,8 +47,8 @@ export function JobListView() {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Failed to load jobs</AlertTitle>
-        <AlertDescription>Make sure the backend server is running.</AlertDescription>
+        <AlertTitle>{copy.board.errorTitle}</AlertTitle>
+        <AlertDescription>{copy.board.errorDescription}</AlertDescription>
       </Alert>
     )
   }
@@ -68,13 +70,13 @@ export function JobListView() {
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           size={16}
         />
-        <Input
-          type="text"
-          placeholder="Search by title or company..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+          <Input
+            type="text"
+            placeholder={copy.searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
       </div>
 
       <Card className="gap-0 p-0 overflow-hidden">
@@ -82,22 +84,22 @@ export function JobListView() {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
-                Vacancy / Company
+                {copy.list.vacancyCompany}
               </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
-                Status
+                {copy.list.status}
               </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
-                Modality
+                {copy.list.modality}
               </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
-                Salary
+                {copy.list.salary}
               </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
-                Publish date
+                {copy.list.publishDate}
               </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold text-right', fontSize.caption)}>
-                Actions
+                {copy.list.actions}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -105,7 +107,7 @@ export function JobListView() {
             {filteredJobs.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={6} className={cn('text-center text-muted-foreground', spacing.tableEmpty)}>
-                  No jobs yet
+                  {copy.common.noJobs}
                 </TableCell>
               </TableRow>
             ) : (

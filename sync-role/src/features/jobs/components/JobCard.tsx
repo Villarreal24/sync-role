@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
+import { useJobsCopy } from '../copy'
 import type { JobPosting, JobStatus } from '../types'
 import { ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { statusToken, spacing, fontSize } from '@/shared/design-tokens'
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function JobCard({ job }: Props) {
+  const copy = useJobsCopy()
   const [showDescription, setShowDescription] = useState(false)
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
@@ -78,7 +80,7 @@ export function JobCard({ job }: Props) {
           </p>
         )}
         <div className={cn('flex flex-wrap gap-3 text-muted-foreground', fontSize.caption)}>
-          {job.recruiterName && <span>Recruiter: {job.recruiterName}</span>}
+          {job.recruiterName && <span>{copy.card.recruiterPrefix} {job.recruiterName}</span>}
           {job.publishedAt && <span>{job.publishedAt}</span>}
         </div>
 
@@ -111,11 +113,11 @@ export function JobCard({ job }: Props) {
             >
               {showDescription ? (
                 <>
-                  <ChevronUp size={12} /> Hide description
+                  <ChevronUp size={12} /> {copy.card.hideDescription}
                 </>
               ) : (
                 <>
-                  <ChevronDown size={12} /> Show description
+                  <ChevronDown size={12} /> {copy.card.showDescription}
                 </>
               )}
             </Button>
@@ -151,7 +153,7 @@ export function JobCard({ job }: Props) {
             asChild
             variant="ghost"
             size="icon"
-            aria-label="Open source"
+            aria-label={copy.card.openSource}
             className="h-5 w-5 text-muted-foreground hover:text-foreground"
           >
             <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
@@ -162,7 +164,7 @@ export function JobCard({ job }: Props) {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Delete job"
+            aria-label={copy.card.deleteJob}
             onClick={handleDelete}
             className="h-5 w-5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >

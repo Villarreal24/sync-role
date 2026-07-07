@@ -8,6 +8,7 @@ import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ThemeController } from '@/features/theme/ThemeController'
 import { ThemeScript } from '@/features/theme/ThemeScript'
+import { CopyProvider } from '@/shared/copy/locale'
 import { Splash } from '@/shared/components/brand/Splash'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 
@@ -124,13 +125,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-background text-foreground antialiased">
-        <Splash />
-        <ThemeController />
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider delayDuration={150}>
-            <AuthGuard>{children}</AuthGuard>
-          </TooltipProvider>
-        </QueryClientProvider>
+        <CopyProvider>
+          <Splash />
+          <ThemeController />
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider delayDuration={150}>
+              <AuthGuard>{children}</AuthGuard>
+            </TooltipProvider>
+          </QueryClientProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
@@ -142,6 +144,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
           ]}
         />
+        </CopyProvider>
         <Scripts />
       </body>
     </html>

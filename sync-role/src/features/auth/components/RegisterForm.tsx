@@ -4,6 +4,7 @@ import { SubmitButton } from '#/shared/components/SubmitButton'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
+import { useAuthCopy } from '@/features/auth/copy'
 import { cn } from '@/shared/lib/utils'
 
 type FormState = { error?: string } | null
@@ -14,6 +15,7 @@ interface RegisterFormProps {
 }
 
 export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
+  const copy = useAuthCopy()
   const [state, formAction] = useActionState<FormState, FormData>(
     async (_prev, formData) => {
       const email = String(formData.get('email'))
@@ -39,21 +41,21 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
 
   return (
     <form action={formAction} className={spacing.field}>
-      <h2 className={cn('text-foreground', fontSize.title)}>Create Account</h2>
+      <h2 className={cn('text-foreground', fontSize.title)}>{copy.register.title}</h2>
 
       <div>
         <Label
           htmlFor="reg-email"
           className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
-          Email
+          {copy.common.email}
         </Label>
         <Input
           id="reg-email"
           name="email"
           type="email"
           required
-          placeholder="you@example.com"
+          placeholder={copy.register.emailPlaceholder}
         />
       </div>
 
@@ -62,7 +64,7 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
           htmlFor="reg-password"
           className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
-          Password
+          {copy.common.password}
         </Label>
         <Input
           id="reg-password"
@@ -70,7 +72,7 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
           type="password"
           required
           minLength={8}
-          placeholder="At least 8 characters"
+          placeholder={copy.register.passwordPlaceholder}
         />
       </div>
 
@@ -79,14 +81,14 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
           htmlFor="reg-confirm"
           className={cn('block text-muted-foreground', fontSize.label, spacing.fieldLabel)}
         >
-          Confirm Password
+          {copy.register.confirmPassword}
         </Label>
         <Input
           id="reg-confirm"
           name="confirm"
           type="password"
           required
-          placeholder="Repeat your password"
+          placeholder={copy.register.confirmPlaceholder}
         />
       </div>
 
@@ -94,10 +96,10 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
         <p className={cn('text-destructive', fontSize.error)}>{state.error}</p>
       )}
 
-      <SubmitButton pendingLabel="Creating account...">Create Account</SubmitButton>
+      <SubmitButton pendingLabel={copy.register.pendingLabel}>{copy.register.title}</SubmitButton>
 
       <p className={cn('text-muted-foreground text-center', fontSize.muted)}>
-        Already have an account?{' '}
+        {copy.register.haveAccount}{' '}
         <Button
           type="button"
           variant="link"
@@ -105,7 +107,7 @@ export function RegisterForm({ onRegister, onToggleMode }: RegisterFormProps) {
           onClick={onToggleMode}
           className="h-auto p-0"
         >
-          Sign In
+          {copy.register.signInCta}
         </Button>
       </p>
     </form>

@@ -12,12 +12,14 @@ import {
 } from '@/shared/components/ui/dropdown-menu'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import { useThemeStore } from '@/features/theme/theme.store'
+import { useSidebarCopy } from './copy'
 
 interface ProfileMenuProps {
   children: React.ReactNode
 }
 
 export function ProfileMenu({ children }: ProfileMenuProps) {
+  const copy = useSidebarCopy()
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
   const { logout } = useAuth()
@@ -40,12 +42,12 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
           }}
         >
           <UserIcon className="h-4 w-4" />
-          Profile
+          {copy.menu.profile}
         </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Sun className="h-4 w-4" />
-            Theme
+            {copy.menu.theme}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
@@ -54,7 +56,7 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
                 className={theme === 'system' ? 'bg-accent text-accent-foreground' : ''}
               >
                 <Monitor className="h-4 w-4" />
-                System
+                {copy.menu.system}
                 {theme === 'system' && <span className="ml-auto text-xs">✓</span>}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -62,7 +64,7 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
                 className={theme === 'light' ? 'bg-accent text-accent-foreground' : ''}
               >
                 <Sun className="h-4 w-4" />
-                Light
+                {copy.menu.light}
                 {theme === 'light' && <span className="ml-auto text-xs">✓</span>}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -70,7 +72,7 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
                 className={theme === 'dark' ? 'bg-accent text-accent-foreground' : ''}
               >
                 <Moon className="h-4 w-4" />
-                Dark
+                {copy.menu.dark}
                 {theme === 'dark' && <span className="ml-auto text-xs">✓</span>}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
@@ -84,7 +86,7 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="h-4 w-4" />
-          Log out
+          {copy.menu.logOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

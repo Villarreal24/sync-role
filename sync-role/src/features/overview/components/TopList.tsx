@@ -1,5 +1,6 @@
 import { Card } from '@/shared/components/ui/card'
 import { cn } from '@/shared/lib/utils'
+import { useOverviewCopy } from '../copy'
 
 interface TopListItem {
   name: string
@@ -21,15 +22,17 @@ export function TopList({
   title,
   items,
   barClassName = 'bg-primary',
-  emptyMessage = 'No data yet.',
+  emptyMessage,
 }: TopListProps) {
+  const copy = useOverviewCopy()
+  const resolvedEmpty = emptyMessage ?? copy.empty.noData
   const max = items.reduce((acc, i) => Math.max(acc, i.count), 0)
 
   return (
     <Card className="h-full p-5">
       <h2 className="text-base font-semibold tracking-tight">{title}</h2>
       {items.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="mt-4 text-sm text-muted-foreground">{resolvedEmpty}</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {items.map((item) => {

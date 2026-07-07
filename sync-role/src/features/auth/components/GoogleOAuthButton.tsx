@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react'
 import { fontSize } from '#/shared/design-tokens'
 import { Button } from '@/shared/components/ui/button'
+import { useAuthCopy } from '@/features/auth/copy'
 
 const API_BASE = import.meta.env.BACKEND_API_URL
 
 export function GoogleOAuthButton() {
+  const copy = useAuthCopy()
   const [loading, setLoading] = useState(false)
 
   const handleClick = useCallback(async () => {
@@ -46,7 +48,7 @@ export function GoogleOAuthButton() {
           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         />
       </svg>
-      <span className={fontSize.body}>{loading ? 'Redirecting...' : 'Sign in with Google'}</span>
+      <span className={fontSize.body}>{loading ? copy.google.redirecting : copy.google.signInWith}</span>
     </Button>
   )
 }

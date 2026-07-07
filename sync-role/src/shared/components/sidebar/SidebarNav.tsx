@@ -2,6 +2,7 @@ import { LayoutGrid, Briefcase } from 'lucide-react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
+import { useSidebarCopy } from './copy'
 import { cn } from '@/shared/lib/utils'
 
 interface SidebarNavItemProps {
@@ -43,12 +44,13 @@ export function SidebarNavItem({ to, label, icon }: SidebarNavItemProps) {
 }
 
 export function SidebarNav() {
+  const copy = useSidebarCopy()
   return (
     <nav className="flex-1 space-y-1 px-2 py-4">
-      <SidebarNavItem to="/" label="Overview" icon={<LayoutGrid className="h-4 w-4" />} />
+      <SidebarNavItem to="/" label={copy.nav.overview} icon={<LayoutGrid className="h-4 w-4" />} />
       <SidebarNavItem
         to="/applications"
-        label="Applications"
+        label={copy.nav.applications}
         icon={<Briefcase className="h-4 w-4" />}
       />
     </nav>

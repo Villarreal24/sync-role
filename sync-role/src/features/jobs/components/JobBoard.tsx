@@ -1,5 +1,6 @@
 import { useJobsQuery } from '../hooks/use-jobs'
 import { useJobFiltersStore } from '../store/job.store'
+import { useJobsCopy } from '../copy'
 import { KanbanColumn } from './KanbanColumn'
 import type { JobStatus } from '../types'
 import { Search } from 'lucide-react'
@@ -16,6 +17,7 @@ const columns: { status: JobStatus; title: string }[] = [
 ]
 
 export function JobBoard() {
+  const copy = useJobsCopy()
   const { data: jobs, isLoading, error } = useJobsQuery()
   const searchQuery = useJobFiltersStore((s) => s.searchQuery)
   const statusFilter = useJobFiltersStore((s) => s.statusFilter)
@@ -41,10 +43,8 @@ export function JobBoard() {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Failed to load jobs</AlertTitle>
-        <AlertDescription>
-          Make sure the backend server is running.
-        </AlertDescription>
+        <AlertTitle>{copy.board.errorTitle}</AlertTitle>
+        <AlertDescription>{copy.board.errorDescription}</AlertDescription>
       </Alert>
     )
   }
@@ -69,7 +69,7 @@ export function JobBoard() {
           />
           <Input
             type="text"
-            placeholder="Search by title or company..."
+            placeholder={copy.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"

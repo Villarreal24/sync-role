@@ -104,24 +104,24 @@ describe('Overview', () => {
   it('renders KPIs and top lists from the payload', async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce(fullStats)
     render(<Overview />, { wrapper: makeWrapper() })
-    expect(await screen.findByText('Total Guardadas')).toBeInTheDocument()
+    expect(await screen.findByText('Total Saved')).toBeInTheDocument()
     expect(screen.getByText('15')).toBeInTheDocument() // applied (unique value)
-    expect(screen.getByText('+13 esta semana')).toBeInTheDocument()
-    expect(screen.getByText('89.5% de conversión')).toBeInTheDocument()
-    expect(screen.getByText('Top Tecnologías Solicitadas')).toBeInTheDocument()
+    expect(screen.getByText('+13 this week')).toBeInTheDocument()
+    expect(screen.getByText('89.5% conversion')).toBeInTheDocument()
+    expect(screen.getByText('Top Requested Technologies')).toBeInTheDocument()
     expect(screen.getByText('React')).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
-    expect(screen.getByText('Actividad de Aplicaciones')).toBeInTheDocument()
+    expect(screen.getByText('Applications Activity')).toBeInTheDocument()
   })
 
   it('renders zeros for a user with no jobs (no empty-state CTA)', async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce(zeroStats)
     render(<Overview />, { wrapper: makeWrapper() })
     // All four KPIs are present, each with value 0
-    expect(await screen.findByText('Total Guardadas')).toBeInTheDocument()
+    expect(await screen.findByText('Total Saved')).toBeInTheDocument()
     // TopList renders the heading + an "empty" message when there
     // are no items, so the heading is still there.
-    expect(screen.getByText('Top Tecnologías Solicitadas')).toBeInTheDocument()
+    expect(screen.getByText('Top Requested Technologies')).toBeInTheDocument()
     expect(screen.getAllByText('No data yet.').length).toBeGreaterThanOrEqual(1)
     // No subtext "+N esta semana" for any of the KPIs
     expect(screen.queryByText(/esta semana/)).not.toBeInTheDocument()

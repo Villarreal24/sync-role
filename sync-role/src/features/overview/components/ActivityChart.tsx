@@ -1,5 +1,6 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card } from '@/shared/components/ui/card'
+import { useOverviewCopy } from '../copy'
 import type { OverviewActivityWeek } from '../api/stats'
 
 interface ActivityChartProps {
@@ -37,12 +38,13 @@ function ChartTooltip({
   payload?: Array<{ value: number }>
   label?: string
 }) {
+  const copy = useOverviewCopy()
   if (!active || !payload || payload.length === 0) return null
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
       <p className="font-medium">{label}</p>
       <p className="text-muted-foreground">
-        Events: <span className="font-semibold text-foreground">{payload[0].value}</span>
+        {copy.activity.tooltipEventLabel}: <span className="font-semibold text-foreground">{payload[0].value}</span>
       </p>
     </div>
   )

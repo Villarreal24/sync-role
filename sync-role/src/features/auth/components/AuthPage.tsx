@@ -4,6 +4,7 @@ import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
 import { GoogleOAuthButton } from './GoogleOAuthButton'
 import { useAuth } from '../hooks/use-auth'
+import { useAuthCopy } from '../copy'
 import { useAuthStore } from '../store/auth.store'
 import { Card } from '@/shared/components/ui/card'
 import { Separator } from '@/shared/components/ui/separator'
@@ -11,6 +12,7 @@ import { fontSize } from '@/shared/design-tokens'
 import { cn } from '@/shared/lib/utils'
 
 export function AuthPage() {
+  const copy = useAuthCopy()
   const [isLogin, setIsLogin] = useState(true)
   const { register, login } = useAuth()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -42,7 +44,7 @@ export function AuthPage() {
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-foreground">Sync Role</h1>
           <p className={cn('mt-1 text-muted-foreground', fontSize.body)}>
-            {isLogin ? 'Welcome back' : 'Create your account'}
+            {isLogin ? copy.authPage.welcomeBack : copy.authPage.createYourAccount}
           </p>
         </div>
 
@@ -63,7 +65,7 @@ export function AuthPage() {
             <div className="relative">
               <Separator />
               <div className={cn('relative -mt-3 flex justify-center', fontSize.body)}>
-                <span className="px-2 bg-card text-muted-foreground">or continue with</span>
+                <span className="px-2 bg-card text-muted-foreground">{copy.authPage.orContinueWith}</span>
               </div>
             </div>
 
