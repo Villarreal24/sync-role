@@ -1,9 +1,9 @@
-import { Settings, MoreVertical } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { Button } from '@/shared/components/ui/button'
 import { useMounted } from '@/shared/hooks/use-mounted'
 import { UserAvatar } from './UserAvatar'
 import { ProfileMenu } from './ProfileMenu'
+import { SettingsMenu } from './SettingsMenu'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
 import { useSidebarCopy } from './copy'
 import { cn } from '@/shared/lib/utils'
@@ -22,18 +22,7 @@ export function SidebarFooter() {
   return (
     <div className="border-t border-border p-2">
       <div className={cn('space-y-1', collapsed && 'space-y-2')}>
-        <Button
-          variant="ghost"
-          className={cn(
-            'w-full justify-start gap-3 text-muted-foreground',
-            collapsed && 'justify-center px-0',
-          )}
-          aria-label={copy.footer.settingsAria}
-          disabled
-        >
-          <Settings className="h-4 w-4" />
-          <span className={cn(collapsed && 'hidden')}>{copy.footer.settings}</span>
-        </Button>
+        <SettingsMenu collapsed={collapsed} />
 
         <ProfileMenu>
           <button

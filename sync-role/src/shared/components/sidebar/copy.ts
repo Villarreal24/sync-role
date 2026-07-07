@@ -20,6 +20,11 @@ export interface SidebarCopy {
     dark: string
     logOut: string
   }
+  settingsMenu: {
+    english: string
+    spanish: string
+    aiProvider: string
+  }
 }
 
 function makeSidebarCopy(common: CommonCopy): SidebarCopy {
@@ -44,6 +49,11 @@ function makeSidebarCopy(common: CommonCopy): SidebarCopy {
       dark: 'Dark',
       logOut: 'Log out',
     },
+    settingsMenu: {
+      english: 'English',
+      spanish: 'Español',
+      aiProvider: 'AI Provider',
+    },
   }
 }
 
@@ -65,6 +75,11 @@ function makeSidebarCopyEs(common: CommonCopy): SidebarCopy {
       light: 'Claro',
       dark: 'Oscuro',
       logOut: 'Cerrar sesión',
+    },
+    settingsMenu: {
+      english: 'English',
+      spanish: 'Español',
+      aiProvider: 'Proveedor de IA',
     },
   }
 }
