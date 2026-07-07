@@ -80,12 +80,12 @@ describe('ProfileMenu', () => {
     expect(await screen.findByText('Dark')).toBeInTheDocument()
   })
 
-  it('navigates to / when Profile is clicked', async () => {
+  it('navigates to /profile when Profile is clicked', async () => {
     const user = userEvent.setup()
     renderMenu()
     await user.click(screen.getByText('Open menu'))
     await user.click(screen.getByText('Profile'))
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/profile' })
   })
 
   it('calls logout when Log out is clicked (logout handles the redirect)', async () => {

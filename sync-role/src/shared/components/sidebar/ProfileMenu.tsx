@@ -36,7 +36,7 @@ export function ProfileMenu({ children }: ProfileMenuProps) {
         <DropdownMenuItem
           onSelect={(e) => {
             e.preventDefault()
-            navigate({ to: '/' })
+            navigate({ to: '/profile' })
           }}
         >
           <UserIcon className="h-4 w-4" />
