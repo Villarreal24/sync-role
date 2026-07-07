@@ -10,8 +10,12 @@ interface AuthResponse {
   user: { id: string; email: string }
 }
 
+function toAuthUser(u: { id: string; email: string }) {
+  return { id: u.id, email: u.email, displayName: '', avatarUrl: '' }
+}
+
 export function useAuth() {
-  const { token, refreshToken, user, isAuthenticated, setAuth, clearAuth } =
+  const { token, refreshToken, user, isAuthenticated, setAuth, clearAuth, hydrateProfile } =
     useAuthStore()
   const navigate = useNavigate()
 
@@ -26,9 +30,10 @@ export function useAuth() {
       throw new Error(err.detail || 'Registration failed')
     }
     const data: AuthResponse = await res.json()
-    setAuth(data.access_token, data.refresh_token, data.user)
+    setAuth(data.access_token, data.refresh_token, toAuthUser(data.user))
+    void hydrateProfile()
     navigate({ to: '/' })
-  }, [setAuth, navigate])
+  }, [setAuth, hydrateProfile, navigate])
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -41,9 +46,10 @@ export function useAuth() {
       throw new Error(err.detail || 'Login failed')
     }
     const data: AuthResponse = await res.json()
-    setAuth(data.access_token, data.refresh_token, data.user)
+    setAuth(data.access_token, data.refresh_token, toAuthUser(data.user))
+    void hydrateProfile()
     navigate({ to: '/' })
-  }, [setAuth, navigate])
+  }, [setAuth, hydrateProfile, navigate])
 
   const logout = useCallback(async () => {
     try {
@@ -55,7 +61,9 @@ export function useAuth() {
       // Best effort logout
     }
     clearAuth()
-    navigate({ to: '/auth' })
+    // replace: true so the browser back button doesn't take the
+    // user back to an authenticated screen.
+    navigate({ to: '/auth', replace: true })
   }, [token, clearAuth, navigate])
 
   const refreshAuth = useCallback(async () => {
@@ -72,7 +80,7 @@ export function useAuth() {
         return false
       }
       const data: AuthResponse = await res.json()
-      setAuth(data.access_token, data.refresh_token, data.user)
+      setAuth(data.access_token, data.refresh_token, toAuthUser(data.user))
       return true
     } catch {
       clearAuth()

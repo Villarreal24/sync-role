@@ -6,11 +6,30 @@ import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { ThemeController } from '@/features/theme/ThemeController'
+import { ThemeScript } from '@/features/theme/ThemeScript'
+import { Splash } from '@/shared/components/brand/Splash'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 
 import appCss from '../styles.css?url'
 
 const queryClient = getQueryClient()
+
+function NotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-semibold">Not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you are looking for does not exist.
+        </p>
+        <a href="/" className="mt-4 inline-block text-sm text-primary underline">
+          Go to Overview
+        </a>
+      </div>
+    </div>
+  )
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -23,21 +42,25 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'ApplySync - Job Tracker',
+        title: 'Sync Role - Job Tracker',
       },
     ],
     links: [
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      { rel: 'manifest', href: '/manifest.json' },
       {
         rel: 'stylesheet',
         href: appCss,
       },
     ],
   }),
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 })
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const profileHydrated = useAuthStore((s) => s.profileHydrated)
   const router = useRouter()
   const location = useLocation()
 
@@ -47,23 +70,62 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !isAuthRoute) {
       router.navigate({ to: '/auth', replace: true })
+      return
     }
 
     if (isAuthenticated && isAuthRoute) {
       router.navigate({ to: '/', replace: true })
+      return
     }
-  }, [isAuthenticated, location.pathname, router])
+
+    // Hydrate profile (displayName + avatarUrl) once per session.
+    // The profileHydrated flag is set in the hydrateProfile() finally
+    // block, so a 404 from the backend (e.g. user signed up via
+    // email/password with no profile row) still counts as hydrated
+    // and the guard doesn't loop re-fetching on every render.
+    if (isAuthenticated && !profileHydrated) {
+      void useAuthStore.getState().hydrateProfile()
+    }
+  }, [isAuthenticated, profileHydrated, location.pathname, router])
 
   return <>{children}</>
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <ThemeScript />
+        <style>{`
+          #app-splash {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: hsl(var(--background));
+            z-index: 9999;
+            transition: opacity 400ms ease-out;
+          }
+          #app-splash svg {
+            width: 48px;
+            height: 48px;
+            color: hsl(var(--muted-foreground));
+            animation: app-splash-pulse 1.2s ease-in-out infinite;
+          }
+          #app-splash.app-splash--fading {
+            opacity: 0;
+          }
+          @keyframes app-splash-pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+          }
+        `}</style>
         <HeadContent />
       </head>
       <body className="bg-background text-foreground antialiased">
+        <Splash />
+        <ThemeController />
         <QueryClientProvider client={queryClient}>
           <TooltipProvider delayDuration={150}>
             <AuthGuard>{children}</AuthGuard>

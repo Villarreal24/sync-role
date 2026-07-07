@@ -1,10 +1,10 @@
-# ApplySync — Job Application Tracker
+# Sync Role — Job Application Tracker
 
 A full-stack job application tracker with a Kanban board interface and a browser extension for one-click job scraping. Built with React 19 + TanStack Start, FastAPI + OpenAI, and Supabase.
 
 ## Project Overview
 
-ApplySync helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The **browser extension** (Chrome MV3) works on **any job board** (LinkedIn, Indeed, Greenhouse, etc.) — it sends the page text to GPT-4o-mini for structured data extraction and saves directly to the tracker with a single click. If scraping fails on an unrecognized site, the form falls back to manual entry with fields pre-filled from the page URL.
+Sync Role helps users track job applications through a visual Kanban workflow. Applications move through statuses: `saved → applied → interviewing → rejected → offer`. The **browser extension** (Chrome MV3) works on **any job board** (LinkedIn, Indeed, Greenhouse, etc.) — it sends the page text to GPT-4o-mini for structured data extraction and saves directly to the tracker with a single click. If scraping fails on an unrecognized site, the form falls back to manual entry with fields pre-filled from the page URL.
 
 ## Architecture
 

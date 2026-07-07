@@ -109,7 +109,7 @@ def _mock_supabase():
 def test_health_check():
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.json() == {"message": "Welcome to ApplySync API"}
+    assert resp.json() == {"message": "Welcome to Sync Role API"}
 
 
 def test_get_jobs_returns_list():

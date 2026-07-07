@@ -40,7 +40,16 @@ class AuthError extends Error {
   }
 }
 
-export { AuthError }
+class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+export { AuthError, ApiError }
 
 export const apiClient = {
   get: async <T>(path: string): Promise<T> => {
@@ -50,7 +59,7 @@ export const apiClient = {
       if (!refreshed) throw new AuthError('Session expired')
       return apiClient.get<T>(path)
     }
-    if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
+    if (!res.ok) throw new ApiError(`GET ${path} failed: ${res.status}`, res.status)
     return res.json()
   },
 
@@ -65,7 +74,7 @@ export const apiClient = {
       if (!refreshed) throw new AuthError('Session expired')
       return apiClient.post<T>(path, body)
     }
-    if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
+    if (!res.ok) throw new ApiError(`POST ${path} failed: ${res.status}`, res.status)
     return res.json()
   },
 
@@ -80,7 +89,7 @@ export const apiClient = {
       if (!refreshed) throw new AuthError('Session expired')
       return apiClient.patch<T>(path, body)
     }
-    if (!res.ok) throw new Error(`PATCH ${path} failed: ${res.status}`)
+    if (!res.ok) throw new ApiError(`PATCH ${path} failed: ${res.status}`, res.status)
     return res.json()
   },
 
@@ -94,6 +103,6 @@ export const apiClient = {
       if (!refreshed) throw new AuthError('Session expired')
       return apiClient.delete(path)
     }
-    if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`)
+    if (!res.ok) throw new ApiError(`DELETE ${path} failed: ${res.status}`, res.status)
   },
 }

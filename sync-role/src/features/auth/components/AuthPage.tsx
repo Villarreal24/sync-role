@@ -23,7 +23,14 @@ export function AuthPage() {
       const refreshToken = params.get('refresh_token') ?? ''
       const userId = params.get('user_id') ?? ''
       const email = params.get('email') ?? ''
-      setAuth(accessToken, refreshToken, { id: userId, email })
+      const displayName = params.get('display_name') ?? ''
+      const avatarUrl = params.get('avatar_url') ?? ''
+      setAuth(accessToken, refreshToken, {
+        id: userId,
+        email,
+        displayName,
+        avatarUrl,
+      })
       window.history.replaceState({}, '', '/auth')
       navigate({ to: '/' })
     }
@@ -33,7 +40,7 @@ export function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-foreground">ApplySync</h1>
+          <h1 className="text-2xl font-bold text-foreground">Sync Role</h1>
           <p className={cn('mt-1 text-muted-foreground', fontSize.body)}>
             {isLogin ? 'Welcome back' : 'Create your account'}
           </p>

@@ -13,7 +13,7 @@ export function SubmitButton({ children, pendingLabel }: SubmitButtonProps) {
     <Button
       type="submit"
       disabled={pending}
-      className="w-full bg-blue-600 text-white hover:bg-blue-700"
+      className="w-full"
     >
       {pending ? pendingLabel : children}
     </Button>

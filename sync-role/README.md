@@ -1,6 +1,6 @@
-# ApplySync — Frontend
+# Sync Role — Frontend
 
-React 19 + TanStack Start frontend for the ApplySync job application tracker.
+React 19 + TanStack Start frontend for the Sync Role job application tracker.
 
 ## Tech Stack
 
@@ -57,7 +57,7 @@ src/
 
 ## Data Source
 
-Jobs are created via the **ApplySync browser extension** (Chrome MV3) which scrapes job postings from LinkedIn, Indeed, Greenhouse, and any other job board using GPT-4o-mini extraction, with fallback to manual entry. They can also be created manually via the API.
+Jobs are created via the **Sync Role browser extension** (Chrome MV3) which scrapes job postings from LinkedIn, Indeed, Greenhouse, and any other job board using GPT-4o-mini extraction, with fallback to manual entry. They can also be created manually via the API.
 
 ## Backend
 

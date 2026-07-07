@@ -1,8 +1,8 @@
-# Software Design Document: ApplySync — Supabase + FastAPI Backend
+# Software Design Document: Sync Role — Supabase + FastAPI Backend
 
 ## 1. Project Overview
 
-**ApplySync** is a job application tracker with a Kanban board interface. Users track applications through statuses: `saved → applied → interviewing → rejected → offer`.
+**Sync Role** is a job application tracker with a Kanban board interface. Users track applications through statuses: `saved → applied → interviewing → rejected → offer`.
 
 ### Architecture
 

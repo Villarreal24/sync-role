@@ -67,8 +67,8 @@ describe('design-tokens', () => {
 
   it('tagToken returns the expected token for known values', () => {
     const remote = tagToken('workMode', 'Remote')
-    expect(remote.bg).toContain('cyan')
-    expect(remote.text).toContain('cyan')
+    expect(remote.bg).toContain('--tag-workMode-Remote-bg')
+    expect(remote.text).toContain('--tag-workMode-Remote-fg')
   })
 
   it('tagToken returns fallback for unknown values', () => {
