@@ -37,7 +37,7 @@ export function SidebarFooter() {
           <button
             type="button"
             className={cn(
-              'flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-accent',
+              'flex w-full cursor-pointer items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-accent',
               collapsed && 'justify-center',
             )}
             aria-label="Open profile menu"
