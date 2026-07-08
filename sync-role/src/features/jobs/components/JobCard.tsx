@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import { useJobsCopy } from '../copy'
 import type { JobPosting, JobStatus } from '../types'
@@ -26,6 +26,19 @@ interface Props {
 export function JobCard({ job }: Props) {
   const copy = useJobsCopy()
   const [showDescription, setShowDescription] = useState(false)
+  const tagsRef = useRef<HTMLDivElement>(null)
+  const [showAllTechs, setShowAllTechs] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+
+  useEffect(() => {
+    if (!showAllTechs) {
+      const el = tagsRef.current
+      if (el) {
+        setIsOverflowing(el.scrollHeight > el.clientHeight)
+      }
+    }
+  }, [job.technologies, showAllTechs])
+
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
 
@@ -85,20 +98,39 @@ export function JobCard({ job }: Props) {
         </div>
 
         {job.technologies.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {job.technologies.map((tech) => (
-              <Badge
-                key={tech}
-                variant="static"
-                className={cn(
-                  'rounded-md px-1.5 py-0.5 font-medium',
-                  fontSize.caption,
-                  'bg-secondary text-secondary-foreground',
-                )}
+          <div>
+            <div
+              ref={tagsRef}
+              className={cn(
+                'flex flex-wrap gap-1',
+                !showAllTechs && 'max-h-[4.5rem] overflow-hidden',
+              )}
+            >
+              {job.technologies.map((tech) => (
+                <Badge
+                  key={tech}
+                  variant="static"
+                  className={cn(
+                    'rounded-md px-1.5 py-0.5 font-medium',
+                    fontSize.caption,
+                    'bg-secondary text-secondary-foreground',
+                  )}
+                >
+                  {tech}
+                </Badge>
+              ))}
+            </div>
+            {isOverflowing && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={() => setShowAllTechs(!showAllTechs)}
+                className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                {tech}
-              </Badge>
-            ))}
+                {showAllTechs ? copy.card.showLess : copy.card.seeMore}
+              </Button>
+            )}
           </div>
         )}
 

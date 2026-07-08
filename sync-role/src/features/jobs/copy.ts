@@ -22,6 +22,8 @@ export interface JobsCopy {
     hideDescription: string
     openSource: string
     deleteJob: string
+    seeMore: string
+    showLess: string
   }
   actions: {
     viewSource: string
@@ -60,6 +62,8 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       hideDescription: 'Hide description',
       openSource: 'Open source',
       deleteJob: 'Delete job',
+      seeMore: 'See more...',
+      showLess: 'Show less',
     },
     actions: {
       viewSource: 'View source',
@@ -75,7 +79,7 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
     statusLabels: {
       saved: 'Guardada',
       applied: 'Postulada',
-      interviewing: 'En entrevista',
+      interviewing: 'Entrevista',
       rejected: 'Rechazada',
       offer: 'Oferta',
     },
@@ -99,6 +103,8 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       hideDescription: 'Ocultar descripción',
       openSource: 'Abrir fuente',
       deleteJob: 'Eliminar postulación',
+      seeMore: 'Ver más...',
+      showLess: 'Ver menos',
     },
     actions: {
       viewSource: 'Ver fuente',
