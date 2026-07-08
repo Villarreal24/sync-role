@@ -2,10 +2,11 @@ import { Search } from 'lucide-react'
 import { useJobsQuery } from '../hooks/use-jobs'
 import { useJobFiltersStore } from '../store/job.store'
 import { useJobsCopy } from '../copy'
+import { useLocale } from '@/shared/copy/locale'
 import { JobActionsMenu } from './JobActionsMenu'
 import { statusToken, fontSize, spacing } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
-import { formatPublishDate } from '@/shared/date'
+import { formatPublishDate, formatCreatedAt, formatListDate } from '@/shared/date'
 import { Card } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -24,6 +25,7 @@ import {
 
 export function JobListView() {
   const copy = useJobsCopy()
+  const { locale } = useLocale()
   const { data: jobs, isLoading, error } = useJobsQuery()
   const searchQuery = useJobFiltersStore((s) => s.searchQuery)
   const statusFilter = useJobFiltersStore((s) => s.statusFilter)
@@ -98,6 +100,9 @@ export function JobListView() {
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
                 {copy.list.publishDate}
               </TableHead>
+              <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold', fontSize.caption)}>
+                {copy.list.postulationDate}
+              </TableHead>
               <TableHead className={cn('text-muted-foreground uppercase tracking-wider font-semibold text-right', fontSize.caption)}>
                 {copy.list.actions}
               </TableHead>
@@ -106,7 +111,7 @@ export function JobListView() {
           <TableBody>
             {filteredJobs.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className={cn('text-center text-muted-foreground', spacing.tableEmpty)}>
+                <TableCell colSpan={7} className={cn('text-center text-muted-foreground', spacing.tableEmpty)}>
                   {copy.common.noJobs}
                 </TableCell>
               </TableRow>
@@ -127,6 +132,7 @@ export function JobListView() {
                 ) : (
                   <span>{date.display}</span>
                 )
+                const postulation = formatListDate(job.createdAt, locale)
                 return (
                   <TableRow key={job.id} className="border-b-border">
                     <TableCell className={spacing.tableCell}>
@@ -161,6 +167,20 @@ export function JobListView() {
                     </TableCell>
                     <TableCell className={cn(spacing.tableCell, 'text-muted-foreground', fontSize.body)}>
                       {dateCell}
+                    </TableCell>
+                    <TableCell className={cn(spacing.tableCell, 'text-muted-foreground', fontSize.caption)}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default underline-offset-4 hover:underline leading-tight">
+                            {postulation.datePart}
+                            <br />
+                            {postulation.timePart}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {formatCreatedAt(job.createdAt, locale)}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell className={cn(spacing.tableCell, 'text-right')}>
                       <JobActionsMenu job={job} />

@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import { useJobsCopy } from '../copy'
 import type { JobPosting, JobStatus } from '../types'
-import { ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
-import { statusToken, spacing, fontSize } from '@/shared/design-tokens'
+import { Calendar, ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { spacing, fontSize } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -16,6 +16,9 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
+import { formatCreatedAt } from '@/shared/date'
+import { useLocale } from '@/shared/copy/locale'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip'
 
 const statusValues: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
@@ -25,10 +28,20 @@ interface Props {
 
 export function JobCard({ job }: Props) {
   const copy = useJobsCopy()
+  const { locale } = useLocale()
   const [showDescription, setShowDescription] = useState(false)
   const tagsRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleOverflowing, setTitleOverflowing] = useState(false)
   const [showAllTechs, setShowAllTechs] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
+
+  useEffect(() => {
+    const el = titleRef.current
+    if (el) {
+      setTitleOverflowing(el.scrollWidth > el.clientWidth)
+    }
+  }, [job.title])
 
   useEffect(() => {
     if (!showAllTechs) {
@@ -50,30 +63,29 @@ export function JobCard({ job }: Props) {
     deleteJob.mutate(job.id)
   }
 
-  const status = statusToken(job.status)
-
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow gap-0 p-0">
       <CardHeader className="p-4 pb-3 gap-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className={cn('truncate text-base font-semibold text-foreground')}>
-              {job.title}
-            </h3>
+            {titleOverflowing ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 ref={titleRef} className={cn('truncate text-base font-semibold text-foreground')}>
+                    {job.title}
+                  </h3>
+                </TooltipTrigger>
+                <TooltipContent>{job.title}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <h3 ref={titleRef} className={cn('truncate text-base font-semibold text-foreground')}>
+                {job.title}
+              </h3>
+            )}
             <p className={cn('truncate text-muted-foreground', fontSize.body)}>
               {job.company}
             </p>
           </div>
-          <Badge
-            variant="static"
-            className={cn(
-              'shrink-0 rounded-full px-2.5 py-0.5 font-medium',
-              status.bg,
-              status.text,
-            )}
-          >
-            {copy.statusLabels[job.status]}
-          </Badge>
         </div>
       </CardHeader>
 
@@ -134,32 +146,49 @@ export function JobCard({ job }: Props) {
           </div>
         )}
 
-        {job.description && (
-          <div>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={() => setShowDescription(!showDescription)}
-              className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              {showDescription ? (
-                <>
-                  <ChevronUp size={12} /> {copy.card.hideDescription}
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={12} /> {copy.card.showDescription}
-                </>
+        <div className="flex items-center justify-between">
+          {job.description && (
+            <div>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={() => setShowDescription(!showDescription)}
+                className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {showDescription ? (
+                  <>
+                    <ChevronUp size={12} /> {copy.card.hideDescription}
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={12} /> {copy.card.showDescription}
+                  </>
+                )}
+              </Button>
+              {showDescription && (
+                <p className={cn('mt-1 line-clamp-6 whitespace-pre-wrap text-muted-foreground', fontSize.caption)}>
+                  {job.description}
+                </p>
               )}
-            </Button>
-            {showDescription && (
-              <p className={cn('mt-1 line-clamp-6 whitespace-pre-wrap text-muted-foreground', fontSize.caption)}>
-                {job.description}
-              </p>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn('h-5 w-5 text-muted-foreground', !job.description && 'ml-auto')}
+              >
+                <Calendar size={12} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {formatCreatedAt(job.createdAt, locale)}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </CardContent>
 
       <CardFooter className={cn(spacing.cardFooter, 'border-t border-border flex items-center justify-between gap-1')}>

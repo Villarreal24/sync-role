@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { TooltipProvider } from '@/shared/components/ui/tooltip'
 import { JobBoard } from './JobBoard'
 import { useJobFiltersStore } from '../store/job.store'
 import { makeJobList } from '../__fixtures__/jobs'
@@ -25,7 +26,11 @@ function renderWithQueryClient(ui: React.ReactElement) {
       mutations: { retry: false },
     },
   })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(
+    <QueryClientProvider client={client}>
+      <TooltipProvider>{ui}</TooltipProvider>
+    </QueryClientProvider>,
+  )
 }
 
 describe('JobBoard', () => {

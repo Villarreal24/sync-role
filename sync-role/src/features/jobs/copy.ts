@@ -14,6 +14,7 @@ export interface JobsCopy {
     modality: string
     salary: string
     publishDate: string
+    postulationDate: string
     actions: string
   }
   card: {
@@ -54,6 +55,7 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       modality: 'Modality',
       salary: 'Salary',
       publishDate: 'Publish date',
+      postulationDate: 'Postulation date',
       actions: 'Actions',
     },
     card: {
@@ -95,6 +97,7 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       modality: 'Modalidad',
       salary: 'Salario',
       publishDate: 'Fecha de publicación',
+      postulationDate: 'Fecha de postulación',
       actions: 'Acciones',
     },
     card: {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { TooltipProvider } from '@/shared/components/ui/tooltip'
 import { KanbanColumn } from './KanbanColumn'
 import { useJobFiltersStore } from '../store/job.store'
 import { makeJob } from '../__fixtures__/jobs'
@@ -12,7 +13,11 @@ function renderWithQueryClient(ui: React.ReactElement) {
       mutations: { retry: false },
     },
   })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(
+    <QueryClientProvider client={client}>
+      <TooltipProvider>{ui}</TooltipProvider>
+    </QueryClientProvider>,
+  )
 }
 
 describe('KanbanColumn', () => {
