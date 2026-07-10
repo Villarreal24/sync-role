@@ -21,8 +21,12 @@ interface AuthState {
    * user.displayName === '' alone would loop forever).
    */
   profileHydrated: boolean
+  /** Set to 'expired' when the refresh token fails so AuthPage
+   * can show a Shadcn Alert. AuthPage clears it after reading. */
+  sessionExpiredReason: 'expired' | null
   setAuth: (token: string, refreshToken: string, user: AuthUser) => void
-  clearAuth: () => void
+  clearAuth: (reason?: 'expired') => void
+  clearSessionExpired: () => void
   setToken: (token: string) => void
   setProfile: (displayName: string, avatarUrl: string) => void
   hydrateProfile: () => Promise<void>
@@ -79,6 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: initialUser,
   isAuthenticated: initial.token !== null && initial.userId !== null,
   profileHydrated: false,
+  sessionExpiredReason: null,
 
   setAuth: (token, refreshToken, user) => {
     set({
@@ -90,7 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       profileHydrated: false,
     })
     setCookie('syncrole_token', token, 3600) // access_token: 1h
-    setCookie('syncrole_refresh', refreshToken, 2592000) // refresh_token: 30d
+    setCookie('syncrole_refresh', refreshToken, 31536000) // refresh_token: 1 año
     setCookie('syncrole_uid', user.id, 604800)
     setCookie('syncrole_email', user.email, 604800)
     if (user.displayName) setCookie('syncrole_display_name', user.displayName, 604800)
@@ -108,13 +113,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     )
   },
 
-  clearAuth: () => {
+  clearAuth: (reason) => {
     set({
       token: null,
       refreshToken: null,
       user: null,
       isAuthenticated: false,
       profileHydrated: false,
+      sessionExpiredReason: reason ?? null,
     })
     removeCookie('syncrole_token')
     removeCookie('syncrole_refresh')
@@ -126,6 +132,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Tell the extension to drop its cached tokens so it doesn't
     // try to use a session that no longer exists server-side.
     window.postMessage({ type: 'SYNCROLE_LOGOUT' }, window.location.origin)
+  },
+
+  clearSessionExpired: () => {
+    set({ sessionExpiredReason: null })
   },
 
   setToken: (token) => {

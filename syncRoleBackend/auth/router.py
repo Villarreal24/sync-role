@@ -134,6 +134,7 @@ async def refresh(body: AuthRefreshRequest):
     try:
         result = sb.auth.refresh_session(body.refresh_token)
     except Exception as e:
+        logger.error("refresh_session failed for token %r…: %s", body.refresh_token[:20], e)
         raise HTTPException(status_code=401, detail=str(e) or "Refresh failed")
 
     if result.session is None:

@@ -31,6 +31,10 @@ export interface AuthCopy {
     createYourAccount: string
     orContinueWith: string
   }
+  sessionExpired: {
+    title: string
+    description: string
+  }
   google: {
     redirecting: string
     signInWith: string
@@ -81,6 +85,10 @@ function makeAuthCopy(common: CommonCopy): AuthCopy {
       welcomeBack: 'Welcome back',
       createYourAccount: 'Create your account',
       orContinueWith: 'or continue with',
+    },
+    sessionExpired: {
+      title: 'Session expired',
+      description: 'Your session has expired. Please sign in again.',
     },
     google: {
       redirecting: 'Redirecting…',
@@ -134,6 +142,10 @@ function makeAuthCopyEs(common: CommonCopy): AuthCopy {
       welcomeBack: 'Bienvenido de vuelta',
       createYourAccount: 'Crea tu cuenta',
       orContinueWith: 'o continúa con',
+    },
+    sessionExpired: {
+      title: 'Sesión expirada',
+      description: 'Tu sesión expiró. Debes iniciar sesión de nuevo.',
     },
     google: {
       redirecting: 'Redirigiendo…',
