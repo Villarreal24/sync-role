@@ -130,7 +130,9 @@ async def logout(user_id: str = Depends(get_current_user)):
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh(body: AuthRefreshRequest):
     """Refresh an expired JWT using a refresh token."""
-    sb = get_supabase()
+    from supabase import create_client
+
+    sb = create_client(settings.supabase_url, settings.supabase_anon_key)
     try:
         result = sb.auth.refresh_session(body.refresh_token)
     except Exception as e:
