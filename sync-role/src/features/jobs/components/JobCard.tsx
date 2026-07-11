@@ -24,9 +24,10 @@ const statusValues: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected
 
 interface Props {
   job: JobPosting
+  onClick?: () => void
 }
 
-export function JobCard({ job }: Props) {
+export function JobCard({ job, onClick }: Props) {
   const copy = useJobsCopy()
   const { locale } = useLocale()
   const [showDescription, setShowDescription] = useState(false)
@@ -64,7 +65,13 @@ export function JobCard({ job }: Props) {
   }
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow gap-0 p-0">
+    <Card
+      className={cn(
+        'shadow-sm hover:shadow-md transition-shadow gap-0 p-0',
+        onClick && 'cursor-pointer',
+      )}
+      onClick={onClick}
+    >
       <CardHeader className="p-4 pb-3 gap-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -137,7 +144,10 @@ export function JobCard({ job }: Props) {
                 type="button"
                 variant="link"
                 size="sm"
-                onClick={() => setShowAllTechs(!showAllTechs)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowAllTechs(!showAllTechs)
+                }}
                 className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {showAllTechs ? copy.card.showLess : copy.card.seeMore}
@@ -153,7 +163,10 @@ export function JobCard({ job }: Props) {
                 type="button"
                 variant="link"
                 size="sm"
-                onClick={() => setShowDescription(!showDescription)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowDescription(!showDescription)
+                }}
                 className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {showDescription ? (
@@ -179,6 +192,7 @@ export function JobCard({ job }: Props) {
                 type="button"
                 variant="ghost"
                 size="icon"
+                onClick={(e) => e.stopPropagation()}
                 className={cn('h-5 w-5 text-muted-foreground', !job.description && 'ml-auto')}
               >
                 <Calendar size={12} />
@@ -193,7 +207,9 @@ export function JobCard({ job }: Props) {
 
       <CardFooter className={cn(spacing.cardFooter, 'border-t border-border flex items-center justify-between gap-1')}>
         <Select value={job.status} onValueChange={handleStatusChange}>
-          <SelectTrigger className={cn(
+          <SelectTrigger
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
             'h-5 w-auto min-w-[4rem] border-input bg-transparent text-muted-foreground px-1.5 gap-1',
             fontSize.caption,
             '[&>svg]:size-3',
@@ -210,27 +226,38 @@ export function JobCard({ job }: Props) {
         </Select>
 
         <div className={cn('flex items-center', spacing.buttonGroup)}>
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            aria-label={copy.card.openSource}
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-          >
-            <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={9} />
-            </a>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={copy.card.deleteJob}
-            onClick={handleDelete}
-            className="h-5 w-5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 size={9} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                aria-label={copy.card.openSourceTooltip}
+                onClick={(e) => e.stopPropagation()}
+                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              >
+                <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={9} />
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{copy.card.openSourceTooltip}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={copy.card.deleteJob}
+                onClick={(e) => { e.stopPropagation(); handleDelete() }}
+                className="h-5 w-5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 size={9} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{copy.card.deleteJob}</TooltipContent>
+          </Tooltip>
         </div>
       </CardFooter>
     </Card>

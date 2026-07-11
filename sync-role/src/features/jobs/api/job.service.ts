@@ -18,6 +18,13 @@ export const updateJobStatus = async (
   return apiClient.patch<JobPosting>(`/jobs/${id}`, { status })
 }
 
+export const updateJob = async (
+  id: string,
+  data: Partial<JobPosting>,
+): Promise<JobPosting> => {
+  return apiClient.patch<JobPosting>(`/jobs/${id}`, data)
+}
+
 export const deleteJob = async (id: string): Promise<void> => {
   return apiClient.delete(`/jobs/${id}`)
 }

@@ -2,7 +2,7 @@ import { useJobsQuery } from '../hooks/use-jobs'
 import { useJobFiltersStore } from '../store/job.store'
 import { useJobsCopy } from '../copy'
 import { KanbanColumn } from './KanbanColumn'
-import type { JobStatus } from '../types'
+import type { JobPosting, JobStatus } from '../types'
 import { Search } from 'lucide-react'
 import { Input } from '@/shared/components/ui/input'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -10,7 +10,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/aler
 
 const STATUSES: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
-export function JobBoard() {
+interface Props {
+  onCardClick?: (job: JobPosting) => void
+}
+
+export function JobBoard({ onCardClick }: Props) {
   const copy = useJobsCopy()
   const { data: jobs, isLoading, error } = useJobsQuery()
   const searchQuery = useJobFiltersStore((s) => s.searchQuery)
@@ -78,6 +82,7 @@ export function JobBoard() {
             status={status}
             title={copy.statusLabels[status]}
             jobs={filteredJobs.filter((j) => j.status === status)}
+            onCardClick={(job) => onCardClick?.(job)}
           />
         ))}
       </div>

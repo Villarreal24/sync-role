@@ -17,6 +17,7 @@ export function makeJob(overrides: Partial<JobPosting> = {}): JobPosting {
     workMode: 'Remote',
     seniority: 'Mid',
     technologies: ['Python', 'PyTorch', 'Docker'],
+    ownershipNote: [],
     ...overrides,
   }
 }

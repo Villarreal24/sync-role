@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { HeadContent, Scripts, createRootRoute, useRouter, useLocation } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+
 import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
@@ -133,17 +132,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <AuthGuard>{children}</AuthGuard>
             </TooltipProvider>
           </QueryClientProvider>
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
         </CopyProvider>
         <Scripts />
       </body>

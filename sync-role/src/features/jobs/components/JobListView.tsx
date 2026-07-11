@@ -4,6 +4,7 @@ import { useJobFiltersStore } from '../store/job.store'
 import { useJobsCopy } from '../copy'
 import { useLocale } from '@/shared/copy/locale'
 import { JobActionsMenu } from './JobActionsMenu'
+import type { JobPosting } from '../types'
 import { statusToken, fontSize, spacing } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
 import { formatPublishDate, formatCreatedAt, formatListDate } from '@/shared/date'
@@ -23,7 +24,11 @@ import {
   TableRow,
 } from '@/shared/components/ui/table'
 
-export function JobListView() {
+interface Props {
+  onRowClick?: (job: JobPosting) => void
+}
+
+export function JobListView({ onRowClick }: Props) {
   const copy = useJobsCopy()
   const { locale } = useLocale()
   const { data: jobs, isLoading, error } = useJobsQuery()
@@ -134,7 +139,11 @@ export function JobListView() {
                 )
                 const postulation = formatListDate(job.createdAt, locale)
                 return (
-                  <TableRow key={job.id} className="border-b-border">
+                  <TableRow
+                    key={job.id}
+                    className={cn('border-b-border', onRowClick && 'cursor-pointer')}
+                    onClick={() => onRowClick?.(job)}
+                  >
                     <TableCell className={spacing.tableCell}>
                       <div className="font-semibold text-foreground">{job.title}</div>
                       <div className={cn('text-muted-foreground', fontSize.caption)}>
@@ -182,7 +191,10 @@ export function JobListView() {
                         </TooltipContent>
                       </Tooltip>
                     </TableCell>
-                    <TableCell className={cn(spacing.tableCell, 'text-right')}>
+                    <TableCell
+                      className={cn(spacing.tableCell, 'text-right')}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <JobActionsMenu job={job} />
                     </TableCell>
                   </TableRow>

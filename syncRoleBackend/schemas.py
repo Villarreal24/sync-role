@@ -49,6 +49,7 @@ class JobPostingUpdate(BaseModel):
     work_mode: Optional[str] = Field(None, alias="workMode")
     seniority: Optional[str] = None
     technologies: Optional[list[str]] = None
+    ownership_note: Optional[list[dict]] = Field(None, alias="ownershipNote")
 
 
 class JobPostingResponse(BaseModel):
@@ -68,6 +69,7 @@ class JobPostingResponse(BaseModel):
     workMode: str
     seniority: str
     technologies: list[str]
+    ownershipNote: list[dict] = Field(default_factory=list, alias="ownershipNote")
 
     @classmethod
     def from_db_row(cls, row: dict) -> "JobPostingResponse":
@@ -92,6 +94,7 @@ class JobPostingResponse(BaseModel):
             workMode=row.get("work_mode", ""),
             seniority=row.get("seniority", ""),
             technologies=row.get("technologies") or [],
+            ownershipNote=row.get("ownership_note") or [],
         )
 
 
