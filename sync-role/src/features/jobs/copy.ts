@@ -22,6 +22,7 @@ export interface JobsCopy {
     showDescription: string
     hideDescription: string
     openSource: string
+    openSourceTooltip: string
     deleteJob: string
     seeMore: string
     showLess: string
@@ -31,6 +32,28 @@ export interface JobsCopy {
     changeStatus: string
     delete: string
     openMenu: string
+  }
+  sheet: {
+    details: string
+    publishedAt: string
+    appliedAt: string
+    technologies: string
+    description: string
+    notes: string
+    addNote: string
+    addNotePlaceholder: string
+    noteTitlePlaceholder: string
+    noNotes: string
+    sourceLink: string
+    close: string
+    recruiter: string
+    location: string
+    salary: string
+    status: string
+    noteSaveError: string
+    saveNote: string
+    cancelEdit: string
+    editNotePlaceholder: string
   }
 }
 
@@ -63,6 +86,7 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       showDescription: 'Show description',
       hideDescription: 'Hide description',
       openSource: 'Open source',
+      openSourceTooltip: 'View posting',
       deleteJob: 'Delete job',
       seeMore: 'See more...',
       showLess: 'Show less',
@@ -72,6 +96,28 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       changeStatus: 'Change status',
       delete: 'Delete',
       openMenu: 'Open menu',
+    },
+    sheet: {
+      details: 'Details',
+      publishedAt: 'Published',
+      appliedAt: 'Applied',
+      technologies: 'Technologies',
+      description: 'Description',
+      notes: 'Notes',
+      addNote: 'Add',
+      addNotePlaceholder: 'Write a note...',
+      noteTitlePlaceholder: 'Note title (optional)',
+      noNotes: 'No notes yet',
+      sourceLink: 'Open source',
+      close: 'Close',
+      recruiter: 'Recruiter',
+      location: 'Location',
+      salary: 'Salary',
+      status: 'Status',
+      noteSaveError: 'Failed to save note. Check your connection and try again.',
+      saveNote: 'Save',
+      cancelEdit: 'Cancel',
+      editNotePlaceholder: 'Edit note...',
     },
   }
 }
@@ -105,6 +151,7 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       showDescription: 'Mostrar descripción',
       hideDescription: 'Ocultar descripción',
       openSource: 'Abrir fuente',
+      openSourceTooltip: 'Ver publicación',
       deleteJob: 'Eliminar postulación',
       seeMore: 'Ver más...',
       showLess: 'Ver menos',
@@ -114,6 +161,28 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       changeStatus: 'Cambiar estado',
       delete: 'Eliminar',
       openMenu: 'Abrir menú',
+    },
+    sheet: {
+      details: 'Detalles',
+      publishedAt: 'Publicado',
+      appliedAt: 'Postulado',
+      technologies: 'Tecnologías',
+      description: 'Descripción',
+      notes: 'Notas',
+      addNote: 'Agregar',
+      addNotePlaceholder: 'Escribe una nota...',
+      noteTitlePlaceholder: 'Título de la nota (opcional)',
+      noNotes: 'Sin notas aún',
+      sourceLink: 'Abrir fuente',
+      close: 'Cerrar',
+      recruiter: 'Reclutador',
+      location: 'Ubicación',
+      salary: 'Salario',
+      status: 'Estado',
+      noteSaveError: 'No se pudo guardar la nota. Revisa tu conexión e intentalo de nuevo.',
+      saveNote: 'Guardar',
+      cancelEdit: 'Cancelar',
+      editNotePlaceholder: 'Editar nota...',
     },
   }
 }

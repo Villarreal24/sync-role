@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
@@ -31,6 +31,7 @@ describe('KanbanColumn', () => {
         status="offer"
         title="Offer"
         jobs={[makeJob({ id: 'a' }), makeJob({ id: 'b' })]}
+        onCardClick={vi.fn()}
       />,
     )
     const section = screen.getByText('Offer').closest('section') as HTMLElement
@@ -40,7 +41,7 @@ describe('KanbanColumn', () => {
   })
 
   it('shows "No jobs yet" when empty', () => {
-    renderWithQueryClient(<KanbanColumn status="offer" title="Offer" jobs={[]} />)
+    renderWithQueryClient(<KanbanColumn status="offer" title="Offer" jobs={[]} onCardClick={vi.fn()} />)
     expect(screen.getByText('No jobs yet')).toBeInTheDocument()
   })
 
@@ -54,6 +55,7 @@ describe('KanbanColumn', () => {
           makeJob({ id: 'b', title: 'Job B' }),
           makeJob({ id: 'c', title: 'Job C' }),
         ]}
+        onCardClick={vi.fn()}
       />,
     )
     const section = screen.getByText('Applied').closest('section') as HTMLElement

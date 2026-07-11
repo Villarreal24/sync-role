@@ -1,5 +1,12 @@
 export type JobStatus = 'saved' | 'applied' | 'interviewing' | 'rejected' | 'offer'
 
+export interface Note {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+}
+
 export interface JobPosting {
   id: string
   title: string
@@ -16,4 +23,5 @@ export interface JobPosting {
   workMode: string
   seniority: string
   technologies: string[]
+  ownershipNote: Note[]
 }

@@ -1,7 +1,10 @@
+import { useState, useMemo } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { JobBoard } from '@/features/jobs/components/JobBoard'
 import { JobListView } from '@/features/jobs/components/JobListView'
+import { JobDetailSheet } from '@/features/jobs/components/JobDetailSheet'
 import { ViewSwitcher, type JobView } from '@/features/jobs/components/ViewSwitcher'
+import { useJobsQuery } from '@/features/jobs/hooks/use-jobs'
 
 type ApplicationsSearch = { view?: JobView }
 
@@ -9,6 +12,13 @@ export function Applications() {
   const navigate = useNavigate({ from: '/applications' })
   const search = useRouterState({ select: (s) => s.location.search as ApplicationsSearch })
   const view: JobView = search.view === 'list' ? 'list' : 'board'
+  const { data: jobs } = useJobsQuery()
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+
+  const selectedJob = useMemo(
+    () => (selectedJobId ? (jobs ?? []).find((j) => j.id === selectedJobId) ?? null : null),
+    [selectedJobId, jobs],
+  )
 
   const handleViewChange = (next: JobView) => {
     navigate({
@@ -28,7 +38,16 @@ export function Applications() {
         </div>
         <ViewSwitcher value={view} onChange={handleViewChange} />
       </header>
-      {view === 'list' ? <JobListView /> : <JobBoard />}
+      {view === 'list' ? (
+        <JobListView onRowClick={(job) => setSelectedJobId(job.id)} />
+      ) : (
+        <JobBoard onCardClick={(job) => setSelectedJobId(job.id)} />
+      )}
+      <JobDetailSheet
+        job={selectedJob}
+        open={selectedJob !== null}
+        onOpenChange={(open) => { if (!open) setSelectedJobId(null) }}
+      />
     </div>
   )
 }

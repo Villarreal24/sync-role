@@ -125,7 +125,7 @@ describe('JobCard', () => {
     renderWithQueryClient(
       <JobCard job={makeJob({ sourceUrl: 'https://example.com/post' })} />,
     )
-    const link = screen.getByRole('link', { name: /open source/i })
+    const link = screen.getByRole('link', { name: /view posting|ver publicaci/i })
     expect(link).toHaveAttribute('href', 'https://example.com/post')
   })
 
@@ -134,7 +134,7 @@ describe('JobCard', () => {
     const trigger = screen.getByRole('combobox')
     expect(trigger.className).toContain('h-5')
     expect(trigger.className).not.toContain('h-10')
-    const openSource = screen.getByRole('link', { name: /open source/i })
+    const openSource = screen.getByRole('link', { name: /view posting|ver publicaci/i })
     expect(openSource.className).toContain('h-5')
     expect(openSource.className).not.toContain('h-10')
     const deleteBtn = screen.getByRole('button', { name: /delete job/i })

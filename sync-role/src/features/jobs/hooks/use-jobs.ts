@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchJobs, updateJobStatus, deleteJob } from '../api/job.service'
+import { fetchJobs, updateJobStatus, updateJob, deleteJob } from '../api/job.service'
 import type { JobPosting } from '../types'
 
 const JOBS_KEY = ['jobs'] as const
@@ -20,6 +20,20 @@ export function useUpdateJobStatus() {
       updateJobStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: JOBS_KEY })
+    },
+  })
+}
+
+export function useUpdateJob() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<JobPosting> }) =>
+      updateJob(id, data),
+    onSuccess: (updatedJob) => {
+      queryClient.setQueryData<JobPosting[]>(JOBS_KEY, (old) =>
+        old?.map((job) => (job.id === updatedJob.id ? updatedJob : job)),
+      )
     },
   })
 }
