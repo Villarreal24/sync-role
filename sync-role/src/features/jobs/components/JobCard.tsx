@@ -18,7 +18,9 @@ import {
 import { cn } from '@/shared/lib/utils'
 import { formatCreatedAt } from '@/shared/date'
 import { useLocale } from '@/shared/copy/locale'
+import { useCommonCopy } from '@/shared/copy/common'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip'
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog'
 
 const statusValues: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
@@ -29,6 +31,7 @@ interface Props {
 
 export function JobCard({ job, onClick }: Props) {
   const copy = useJobsCopy()
+  const commonCopy = useCommonCopy()
   const { locale } = useLocale()
   const [showDescription, setShowDescription] = useState(false)
   const tagsRef = useRef<HTMLDivElement>(null)
@@ -36,6 +39,7 @@ export function JobCard({ job, onClick }: Props) {
   const [titleOverflowing, setTitleOverflowing] = useState(false)
   const [showAllTechs, setShowAllTechs] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   useEffect(() => {
     const el = titleRef.current
@@ -61,7 +65,7 @@ export function JobCard({ job, onClick }: Props) {
   }
 
   const handleDelete = () => {
-    deleteJob.mutate(job.id)
+    setDeleteDialogOpen(true)
   }
 
   return (
@@ -260,6 +264,15 @@ export function JobCard({ job, onClick }: Props) {
           </Tooltip>
         </div>
       </CardFooter>
+        <ConfirmDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={() => deleteJob.mutate(job.id)}
+          title={copy.card.deleteConfirmTitle}
+          description={copy.card.deleteConfirmDescription}
+          confirmLabel={copy.card.deleteJob}
+          cancelLabel={commonCopy.cancel}
+        />
     </Card>
   )
 }

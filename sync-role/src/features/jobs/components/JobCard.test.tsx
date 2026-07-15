@@ -109,12 +109,13 @@ describe('JobCard', () => {
     })
   })
 
-  it('calls the delete mutation when delete button is clicked', async () => {
+  it('calls the delete mutation when delete is confirmed in dialog', async () => {
     const user = userEvent.setup()
     ;(apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
     renderWithQueryClient(<JobCard job={makeJob({ id: 'job-1' })} />)
 
     await user.click(screen.getByRole('button', { name: /delete job/i }))
+    await user.click(screen.getByTestId('confirm-delete'))
 
     await waitFor(() => {
       expect(apiClient.delete).toHaveBeenCalledWith('/jobs/job-1')
@@ -137,8 +138,8 @@ describe('JobCard', () => {
     const openSource = screen.getByRole('link', { name: /view posting|ver publicaci/i })
     expect(openSource.className).toContain('h-5')
     expect(openSource.className).not.toContain('h-10')
-    const deleteBtn = screen.getByRole('button', { name: /delete job/i })
-    expect(deleteBtn.className).toContain('h-5')
-    expect(deleteBtn.className).not.toContain('h-10')
+    const deleteBtns = screen.getAllByRole('button', { name: /delete job/i })
+    expect(deleteBtns[0].className).toContain('h-5')
+    expect(deleteBtns[0].className).not.toContain('h-10')
   })
 })

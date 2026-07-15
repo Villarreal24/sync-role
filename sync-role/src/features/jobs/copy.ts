@@ -24,6 +24,8 @@ export interface JobsCopy {
     openSource: string
     openSourceTooltip: string
     deleteJob: string
+    deleteConfirmTitle: string
+    deleteConfirmDescription: string
     seeMore: string
     showLess: string
   }
@@ -88,6 +90,8 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       openSource: 'Open source',
       openSourceTooltip: 'View posting',
       deleteJob: 'Delete job',
+      deleteConfirmTitle: 'Delete job',
+      deleteConfirmDescription: 'Are you sure you want to delete this job? This action cannot be undone.',
       seeMore: 'See more...',
       showLess: 'Show less',
     },
@@ -153,6 +157,8 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       openSource: 'Abrir fuente',
       openSourceTooltip: 'Ver publicación',
       deleteJob: 'Eliminar postulación',
+      deleteConfirmTitle: 'Eliminar postulación',
+      deleteConfirmDescription: '¿Estás seguro de que deseas eliminar esta postulación? Esta acción no se puede deshacer.',
       seeMore: 'Ver más...',
       showLess: 'Ver menos',
     },
