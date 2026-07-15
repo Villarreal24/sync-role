@@ -59,7 +59,7 @@ Once logged in, users land on the **Overview dashboard** showing weekly activity
 | Browser Extension | Plasmo 0.90, React 18, TypeScript 5, Chrome MV3 |
 | Frontend | React 19, TypeScript 6, TanStack Router, TanStack Start, TanStack Query, Zustand, Tailwind CSS v4, Vite 8, Recharts |
 | Backend | Python 3.13, FastAPI, Pydantic, supabase-py, OpenAI, Uvicorn |
-| Database | Supabase (Postgres) — 15 migrations |
+| Database | Supabase (Postgres) — 17 migrations |
 | Auth | Supabase Auth (email/password + Google OAuth) |
 | LLM | GPT-4o-mini (data extraction from raw page text) |
 | i18n | Custom React Context + per-module `useCopy` hooks (EN + ES) |
@@ -79,7 +79,8 @@ Once logged in, users land on the **Overview dashboard** showing weekly activity
 │       ├── 001-003               # Job postings table + extension fields
 │       ├── 004-007               # Profiles table + auth FK setup
 │       ├── 008-011               # Application events table + trigger + RLS
-│       └── 012-015               # Overview stats RPC + fixes + LIMIT bumps
+│       ├── 012-015               # Overview stats RPC + fixes + LIMIT bumps
+│       └── 016-017               # Job notes array + extra profile fields
 ├── sync-role/                    # React 19 + TanStack Start frontend
 │   ├── src/
 │   │   ├── core/
@@ -87,8 +88,8 @@ Once logged in, users land on the **Overview dashboard** showing weekly activity
 │   │   ├── features/
 │   │   │   ├── auth/             # Login, Register, Google OAuth, Profile form
 │   │   │   │   ├── api/          # Profile service (HTTP calls)
-│   │   │   │   ├── components/   # AuthPage, ProfileForm, ProfileRoute
-│   │   │   │   ├── hooks/        # use-auth, use-update-profile
+│   │   │   │   ├── components/   # AuthPage, ProfileForm, ProfileRoute, profile-form.types
+│   │   │   │   ├── hooks/        # use-auth, use-update-profile, use-profile-form
 │   │   │   │   └── store/        # auth.store (Zustand)
 │   │   │   ├── jobs/             # JobBoard, KanbanColumn, JobCard, ListView
 │   │   │   │   ├── api/          # Job service (HTTP calls)
@@ -112,7 +113,8 @@ Once logged in, users land on the **Overview dashboard** showing weekly activity
 │   │   │   │   └── ui/           # Button, Card, DropdownMenu, Input, Alert
 │   │   │   ├── copy/             # CopyProvider, useLocale, common.ts (i18n)
 │   │   │   ├── design-tokens.ts  # Semantic tokens for status/tag colors
-│   │   │   └── date.ts           # Date formatting utilities
+│   │   │   ├── date.ts           # Date formatting utilities
+│   │   │   └── format.ts         # Display-only formatting (phone mask, etc.)
 │   │   ├── routes/               # TanStack file-based router
 │   │   │   ├── __root.tsx        # Root layout (providers, splash, theme)
 │   │   │   ├── index.tsx         # Login / Auth page
@@ -209,7 +211,7 @@ Load the `build/chrome-mv3-prod` directory as an unpacked extension in Chrome (`
 | GET | `/api/v1/auth/session` | Exchange session cookie for Bearer JWT (extension) | Cookie |
 | **Profiles** | | | |
 | GET | `/api/v1/profiles/me` | Get authenticated user's profile | Bearer |
-| PATCH | `/api/v1/profiles/me` | Update displayName / avatarUrl | Bearer |
+| PATCH | `/api/v1/profiles/me` | Update displayName, avatarUrl, phone, linkedin_url, github_url, portfolio_url | Bearer |
 | **Stats** | | | |
 | GET | `/api/v1/stats/overview` | Dashboard KPIs, top lists, weekly activity (cache 30s) | Bearer |
 | **Jobs** | | | |
@@ -248,6 +250,10 @@ Load the `build/chrome-mv3-prod` directory as an unpacked extension in Chrome (`
 ├── id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
 ├── display_name    TEXT DEFAULT ''
 ├── avatar_url      TEXT DEFAULT ''
+├── phone           TEXT (nullable)
+├── linkedin_url    TEXT (nullable)
+├── github_url      TEXT (nullable)
+├── portfolio_url   TEXT (nullable)
 └── updated_at      TIMESTAMPTZ DEFAULT now()
 
 Triggers: auto-inserts row on user signup (handle_new_user).
@@ -286,6 +292,8 @@ RLS: users can SELECT only their own events.
 | 012 | `get_overview_stats_rpc.sql` | Stats RPC (draft) |
 | 014 | `get_overview_stats_fix_json_agg.sql` | Fix json_agg in stats RPC |
 | 015 | `top_technologies_limit_8.sql` | Bump top techs LIMIT to 8 |
+| 016 | `ownership_note_array.sql` | Convert ownership_note TEXT → JSONB array |
+| 017 | `add_extra_profile_fields.sql` | Add phone, linkedin_url, github_url, portfolio_url to profiles |
 
 ## Frontend Features
 
@@ -320,6 +328,8 @@ RLS: users can SELECT only their own events.
 - Persisted in `localStorage` key `sync-role:locale`
 
 ### Profile
-- Editable display name and avatar URL
+- Editable display name, avatar URL, phone, LinkedIn URL, GitHub URL, Portfolio URL
 - Live avatar preview with image error fallback
+- Phone formatted for display (e.g. +52 (662)-296-1332); raw value stored and copied
+- Empty URL fields sent as `null` (clearable)
 - Optimistic store update on save
