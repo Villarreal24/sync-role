@@ -194,7 +194,7 @@ describe('JobListView', () => {
     expect(within(submenu).getByText('Offer')).toBeInTheDocument()
   })
 
-  it('calls the delete mutation when Delete is selected', async () => {
+  it('calls the delete mutation when Delete is confirmed in dialog', async () => {
     const user = userEvent.setup()
     ;(apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
     ;(apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(makeJobList())
@@ -204,6 +204,7 @@ describe('JobListView', () => {
     const firstTrigger = screen.getAllByRole('button', { name: /open menu/i })[0]
     await user.click(firstTrigger)
     await user.click(await screen.findByText('Delete'))
+    await user.click(screen.getByTestId('confirm-delete'))
 
     await waitFor(() => {
       expect(apiClient.delete).toHaveBeenCalledWith('/jobs/j-5')

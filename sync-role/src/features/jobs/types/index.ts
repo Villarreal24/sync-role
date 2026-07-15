@@ -24,4 +24,5 @@ export interface JobPosting {
   seniority: string
   technologies: string[]
   ownershipNote: Note[]
+  deletedAt: string | null
 }

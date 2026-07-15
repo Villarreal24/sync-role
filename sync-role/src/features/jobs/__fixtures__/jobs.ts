@@ -18,6 +18,7 @@ export function makeJob(overrides: Partial<JobPosting> = {}): JobPosting {
     seniority: 'Mid',
     technologies: ['Python', 'PyTorch', 'Docker'],
     ownershipNote: [],
+    deletedAt: null,
     ...overrides,
   }
 }

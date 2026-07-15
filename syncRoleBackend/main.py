@@ -119,6 +119,7 @@ async def get_jobs(request: Request):
         _db_for_user(request.state.token)
         .table("job_postings")
         .select("*")
+        .is_("deleted_at", "null")
         .order("created_at", desc=True)
         .execute()
     )
@@ -305,10 +306,15 @@ async def scrape_job(req: ScrapeRequest, request: Request):
 
 @app.delete("/api/v1/jobs/{job_id}")
 async def delete_job(job_id: str, request: Request):
-    result = _db_for_user(request.state.token).table("job_postings").delete().eq("id", job_id).execute()
+    result = (
+        _db_for_user(request.state.token)
+        .table("job_postings")
+        .update({"deleted_at": _now_iso()})
+        .eq("id", job_id)
+        .execute()
+    )
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")
-    # ON DELETE CASCADE removes the related application_events rows.
     invalidate_overview_stats_cache(request.state.user_id)
     return {"message": "Job deleted successfully"}

@@ -14,6 +14,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu'
+import { useCommonCopy } from '@/shared/copy/common'
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog'
 
 const statusValues: JobStatus[] = ['saved', 'applied', 'interviewing', 'rejected', 'offer']
 
@@ -23,7 +25,9 @@ interface JobActionsMenuProps {
 
 export function JobActionsMenu({ job }: JobActionsMenuProps) {
   const copy = useJobsCopy()
+  const commonCopy = useCommonCopy()
   const [open, setOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const updateStatus = useUpdateJobStatus()
   const deleteJob = useDeleteJob()
 
@@ -66,13 +70,22 @@ export function JobActionsMenu({ job }: JobActionsMenuProps) {
         </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={() => deleteJob.mutate(job.id)}
+          onSelect={() => setDeleteDialogOpen(true)}
           className="text-destructive focus:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
           {copy.actions.delete}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={() => deleteJob.mutate(job.id)}
+        title={copy.card.deleteConfirmTitle}
+        description={copy.card.deleteConfirmDescription}
+        confirmLabel={copy.card.deleteJob}
+        cancelLabel={commonCopy.cancel}
+      />
     </DropdownMenu>
   )
 }
