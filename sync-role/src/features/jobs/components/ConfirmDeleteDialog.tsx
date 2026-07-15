@@ -29,10 +29,14 @@ export function ConfirmDeleteDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Overlay
+          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
         <Dialog.Content
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-lg border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-lg border border-zinc-700/50 bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/15">
@@ -49,9 +53,9 @@ export function ConfirmDeleteDialog({
           </div>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Dialog.Close asChild>
-              <Button variant="outline">{cancelLabel}</Button>
+              <Button variant="outline" onClick={(e) => e.stopPropagation()}>{cancelLabel}</Button>
             </Dialog.Close>
-            <Button variant="destructive" onClick={handleConfirm} data-testid="confirm-delete">
+            <Button variant="destructive" onClick={(e) => { e.stopPropagation(); handleConfirm() }} data-testid="confirm-delete">
               {confirmLabel}
             </Button>
           </div>
