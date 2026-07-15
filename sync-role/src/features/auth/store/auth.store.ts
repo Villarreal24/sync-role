@@ -5,6 +5,10 @@ export interface AuthUser {
   email: string
   displayName: string
   avatarUrl: string
+  phone: string | null
+  linkedinUrl: string | null
+  githubUrl: string | null
+  portfolioUrl: string | null
 }
 
 interface AuthState {
@@ -28,7 +32,7 @@ interface AuthState {
   clearAuth: (reason?: 'expired') => void
   clearSessionExpired: () => void
   setToken: (token: string) => void
-  setProfile: (displayName: string, avatarUrl: string) => void
+  setProfile: (displayName: string, avatarUrl: string, phone?: string | null, linkedinUrl?: string | null, githubUrl?: string | null, portfolioUrl?: string | null) => void
   hydrateProfile: () => Promise<void>
 }
 
@@ -55,6 +59,10 @@ function loadFromCookies(): {
   email: string | null
   displayName: string | null
   avatarUrl: string | null
+  phone: string | null
+  linkedinUrl: string | null
+  githubUrl: string | null
+  portfolioUrl: string | null
 } {
   return {
     token: getCookie('syncrole_token'),
@@ -63,6 +71,10 @@ function loadFromCookies(): {
     email: getCookie('syncrole_email'),
     displayName: getCookie('syncrole_display_name'),
     avatarUrl: getCookie('syncrole_avatar_url'),
+    phone: getCookie('syncrole_phone'),
+    linkedinUrl: getCookie('syncrole_linkedin_url'),
+    githubUrl: getCookie('syncrole_github_url'),
+    portfolioUrl: getCookie('syncrole_portfolio_url'),
   }
 }
 
@@ -74,6 +86,10 @@ const initialUser: AuthUser | null =
         email: initial.email,
         displayName: initial.displayName ?? '',
         avatarUrl: initial.avatarUrl ?? '',
+        phone: initial.phone ?? null,
+        linkedinUrl: initial.linkedinUrl ?? null,
+        githubUrl: initial.githubUrl ?? null,
+        portfolioUrl: initial.portfolioUrl ?? null,
       }
     : null
 
@@ -128,6 +144,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     removeCookie('syncrole_email')
     removeCookie('syncrole_display_name')
     removeCookie('syncrole_avatar_url')
+    removeCookie('syncrole_phone')
+    removeCookie('syncrole_linkedin_url')
+    removeCookie('syncrole_github_url')
+    removeCookie('syncrole_portfolio_url')
 
     // Tell the extension to drop its cached tokens so it doesn't
     // try to use a session that no longer exists server-side.
@@ -143,19 +163,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     setCookie('syncrole_token', token, 3600)
   },
 
-  setProfile: (displayName, avatarUrl) => {
+  setProfile: (displayName, avatarUrl, phone = null, linkedinUrl = null, githubUrl = null, portfolioUrl = null) => {
     const current = useAuthStore.getState().user
     if (!current) return
     set({
       user: {
-        id: current.id,
-        email: current.email,
+        ...current,
         displayName,
         avatarUrl,
+        phone,
+        linkedinUrl,
+        githubUrl,
+        portfolioUrl,
       },
     })
     setCookie('syncrole_display_name', displayName, 604800)
     setCookie('syncrole_avatar_url', avatarUrl, 604800)
+    if (phone) setCookie('syncrole_phone', phone, 604800)
+    if (linkedinUrl) setCookie('syncrole_linkedin_url', linkedinUrl, 604800)
+    if (githubUrl) setCookie('syncrole_github_url', githubUrl, 604800)
+    if (portfolioUrl) setCookie('syncrole_portfolio_url', portfolioUrl, 604800)
   },
 
   hydrateProfile: async () => {
@@ -163,7 +190,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const profile = await getProfile()
       if (profile) {
-        useAuthStore.getState().setProfile(profile.displayName, profile.avatarUrl)
+        useAuthStore.getState().setProfile(
+          profile.displayName,
+          profile.avatarUrl,
+          profile.phone,
+          profile.linkedinUrl,
+          profile.githubUrl,
+          profile.portfolioUrl,
+        )
       }
     } finally {
       // Mark hydrated regardless of outcome (success, 404, error) so

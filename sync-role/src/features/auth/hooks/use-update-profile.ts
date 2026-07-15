@@ -18,7 +18,14 @@ export function useUpdateProfile() {
   return useMutation<Profile, Error, ProfileUpdate>({
     mutationFn: updateProfile,
     onSuccess: (data) => {
-      setProfile(data.displayName, data.avatarUrl)
+      setProfile(
+        data.displayName,
+        data.avatarUrl,
+        data.phone,
+        data.linkedinUrl,
+        data.githubUrl,
+        data.portfolioUrl,
+      )
       void queryClient.invalidateQueries({ queryKey: ['overview', 'stats'] })
     },
   })
