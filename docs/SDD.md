@@ -16,6 +16,28 @@ Supabase (Postgres + Auth)
 
 ## 2. Database Schema
 
+### Table: `profiles`
+
+| Column         | Type          | Constraints                        |
+|----------------|---------------|------------------------------------|
+| `id`           | `uuid`        | PK, FK → `auth.users(id)` ON DELETE CASCADE |
+| `display_name` | `text`        | NOT NULL DEFAULT ''                |
+| `avatar_url`   | `text`        | NOT NULL DEFAULT ''                |
+| `phone`        | `text`        | nullable                           |
+| `linkedin_url` | `text`        | nullable                           |
+| `github_url`   | `text`        | nullable                           |
+| `portfolio_url`| `text`        | nullable                           |
+| `created_at`   | `timestamptz` | NOT NULL DEFAULT now()             |
+| `updated_at`   | `timestamptz` | NOT NULL DEFAULT now()             |
+
+**Indexes:**
+- Primary key index on `id`
+
+**RLS Policies:**
+- Users can SELECT their own row (`id = auth.uid()`)
+- Users can UPDATE their own row (`id = auth.uid()`)
+- Insert allowed only for own `id`
+
 ### Table: `job_postings`
 
 | Column       | Type         | Constraints                        |
