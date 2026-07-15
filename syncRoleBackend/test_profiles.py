@@ -152,6 +152,178 @@ class TestProfilesRoutes:
             assert resp.status_code == 400
 
 
+    # ── Extra profile fields tests ──────────────────────────────────
+
+    def test_get_profile_returns_new_fields_as_none(self):
+        """GET /profiles/me should return null for unset extra fields."""
+        from syncRoleBackend.config import settings
+
+        with (
+            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
+            patch("syncRoleBackend.profiles.router.get_supabase") as mock_get_sb,
+        ):
+            mock_sb = MagicMock()
+            mock_result = MagicMock()
+            mock_result.data = [
+                {
+                    "id": _TEST_USER_ID,
+                    "display_name": "Test User",
+                    "avatar_url": "",
+                    "phone": None,
+                    "linkedin_url": None,
+                    "github_url": None,
+                    "portfolio_url": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                }
+            ]
+            mock_sb.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+                mock_result
+            )
+            mock_get_sb.return_value = mock_sb
+
+            from syncRoleBackend.main import app
+
+            client = TestClient(app)
+            resp = client.get("/api/v1/profiles/me", headers=_AUTH_HEADER)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["phone"] is None
+            assert data["linkedin_url"] is None
+            assert data["github_url"] is None
+            assert data["portfolio_url"] is None
+
+    def test_update_profile_accepts_extra_fields(self):
+        """PATCH /profiles/me with phone and social links → 200 + values."""
+        from syncRoleBackend.config import settings
+
+        with (
+            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
+            patch("syncRoleBackend.profiles.router.get_supabase") as mock_get_sb,
+        ):
+            mock_sb = MagicMock()
+            mock_result = MagicMock()
+            mock_result.data = [
+                {
+                    "id": _TEST_USER_ID,
+                    "display_name": "Test User",
+                    "avatar_url": "",
+                    "phone": "+54 11 5555-1234",
+                    "linkedin_url": "https://linkedin.com/in/testuser",
+                    "github_url": "https://github.com/testuser",
+                    "portfolio_url": "https://testuser.dev",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                }
+            ]
+            mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+                mock_result
+            )
+            mock_get_sb.return_value = mock_sb
+
+            from syncRoleBackend.main import app
+
+            client = TestClient(app)
+            resp = client.patch(
+                "/api/v1/profiles/me",
+                json={
+                    "phone": "+54 11 5555-1234",
+                    "linkedin_url": "https://linkedin.com/in/testuser",
+                    "github_url": "https://github.com/testuser",
+                    "portfolio_url": "https://testuser.dev",
+                },
+                headers=_AUTH_HEADER,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["phone"] == "+54 11 5555-1234"
+            assert data["linkedin_url"] == "https://linkedin.com/in/testuser"
+            assert data["github_url"] == "https://github.com/testuser"
+            assert data["portfolio_url"] == "https://testuser.dev"
+
+    def test_update_profile_partial_extra_fields(self):
+        """PATCH with only phone should leave linkedin_url and others unchanged."""
+        from syncRoleBackend.config import settings
+
+        with (
+            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
+            patch("syncRoleBackend.profiles.router.get_supabase") as mock_get_sb,
+        ):
+            mock_sb = MagicMock()
+            mock_result = MagicMock()
+            # Simulate that the DB already had linkedin_url set
+            mock_result.data = [
+                {
+                    "id": _TEST_USER_ID,
+                    "display_name": "Test User",
+                    "avatar_url": "",
+                    "phone": "+1 555 123-4567",
+                    "linkedin_url": "https://linkedin.com/in/testuser",
+                    "github_url": None,
+                    "portfolio_url": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                }
+            ]
+            mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+                mock_result
+            )
+            mock_get_sb.return_value = mock_sb
+
+            from syncRoleBackend.main import app
+
+            client = TestClient(app)
+            resp = client.patch(
+                "/api/v1/profiles/me",
+                json={"phone": "+1 555 123-4567"},
+                headers=_AUTH_HEADER,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["phone"] == "+1 555 123-4567"
+            assert data["linkedin_url"] == "https://linkedin.com/in/testuser"
+
+    def test_update_profile_clears_extra_field(self):
+        """PATCH with empty string → field returns None."""
+        from syncRoleBackend.config import settings
+
+        with (
+            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
+            patch("syncRoleBackend.profiles.router.get_supabase") as mock_get_sb,
+        ):
+            mock_sb = MagicMock()
+            mock_result = MagicMock()
+            mock_result.data = [
+                {
+                    "id": _TEST_USER_ID,
+                    "display_name": "Test User",
+                    "avatar_url": "",
+                    "phone": None,
+                    "linkedin_url": None,
+                    "github_url": None,
+                    "portfolio_url": None,
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                }
+            ]
+            mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+                mock_result
+            )
+            mock_get_sb.return_value = mock_sb
+
+            from syncRoleBackend.main import app
+
+            client = TestClient(app)
+            resp = client.patch(
+                "/api/v1/profiles/me",
+                json={"linkedin_url": ""},
+                headers=_AUTH_HEADER,
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["linkedin_url"] is None
+
+
 class TestJobScoping:
     """RED: tests for user_id scoping on job endpoints."""
 
