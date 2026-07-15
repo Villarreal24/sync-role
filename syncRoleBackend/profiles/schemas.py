@@ -7,6 +7,10 @@ class ProfileResponse(BaseModel):
     id: str
     display_name: str
     avatar_url: str
+    phone: str | None = None
+    linkedin_url: str | None = None
+    github_url: str | None = None
+    portfolio_url: str | None = None
     created_at: str
     updated_at: str
 
@@ -16,6 +20,10 @@ class ProfileResponse(BaseModel):
             id=row["id"],
             display_name=row.get("display_name", ""),
             avatar_url=row.get("avatar_url", ""),
+            phone=row.get("phone"),
+            linkedin_url=row.get("linkedin_url"),
+            github_url=row.get("github_url"),
+            portfolio_url=row.get("portfolio_url"),
             created_at=(
                 row["created_at"].isoformat()
                 if isinstance(row["created_at"], datetime)
@@ -32,3 +40,7 @@ class ProfileResponse(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     display_name: str | None = None
     avatar_url: str | None = None
+    phone: str | None = None
+    linkedin_url: str | None = None
+    github_url: str | None = None
+    portfolio_url: str | None = None

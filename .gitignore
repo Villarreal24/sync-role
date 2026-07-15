@@ -11,3 +11,4 @@ dist/
 out/
 *.tsbuildinfo
 **/.plasmo/
+.atl/

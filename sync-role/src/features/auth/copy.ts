@@ -50,6 +50,14 @@ export interface AuthCopy {
     avatarUrlPlaceholder: string
     avatarUrlHint: string
     avatarAlt: string
+    phoneLabel: string
+    phonePlaceholder: string
+    linkedinUrlLabel: string
+    linkedinUrlPlaceholder: string
+    githubUrlLabel: string
+    githubUrlPlaceholder: string
+    portfolioUrlLabel: string
+    portfolioUrlPlaceholder: string
     save: string
     saving: string
     saved: string
@@ -106,6 +114,14 @@ function makeAuthCopy(common: CommonCopy): AuthCopy {
       avatarUrlPlaceholder: 'https://example.com/avatar.png',
       avatarUrlHint: 'Leave empty to show your initials instead.',
       avatarAlt: 'Avatar preview',
+      phoneLabel: 'Phone',
+      phonePlaceholder: '+1 (555) 123-4567',
+      linkedinUrlLabel: 'LinkedIn URL',
+      linkedinUrlPlaceholder: 'https://linkedin.com/in/username',
+      githubUrlLabel: 'GitHub URL',
+      githubUrlPlaceholder: 'https://github.com/username',
+      portfolioUrlLabel: 'Portfolio URL',
+      portfolioUrlPlaceholder: 'https://your-portfolio.dev',
       save: 'Save changes',
       saving: 'Saving…',
       saved: 'Profile updated',
@@ -163,6 +179,14 @@ function makeAuthCopyEs(common: CommonCopy): AuthCopy {
       avatarUrlPlaceholder: 'https://ejemplo.com/avatar.png',
       avatarUrlHint: 'Déjalo vacío para mostrar tus iniciales.',
       avatarAlt: 'Vista previa del avatar',
+      phoneLabel: 'Teléfono',
+      phonePlaceholder: '+54 11 5555-1234',
+      linkedinUrlLabel: 'URL de LinkedIn',
+      linkedinUrlPlaceholder: 'https://linkedin.com/in/usuario',
+      githubUrlLabel: 'URL de GitHub',
+      githubUrlPlaceholder: 'https://github.com/usuario',
+      portfolioUrlLabel: 'URL del portafolio',
+      portfolioUrlPlaceholder: 'https://tu-portafolio.dev',
       save: 'Guardar cambios',
       saving: 'Guardando…',
       saved: 'Perfil actualizado',

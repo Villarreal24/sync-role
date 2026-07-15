@@ -4,6 +4,10 @@ export interface Profile {
   id: string
   displayName: string
   avatarUrl: string
+  phone: string | null
+  linkedinUrl: string | null
+  githubUrl: string | null
+  portfolioUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -11,12 +15,20 @@ export interface Profile {
 export interface ProfileUpdate {
   displayName?: string
   avatarUrl?: string
+  phone?: string | null
+  linkedinUrl?: string | null
+  githubUrl?: string | null
+  portfolioUrl?: string | null
 }
 
 interface ProfileResponse {
   id: string
   display_name: string
   avatar_url: string
+  phone: string | null
+  linkedin_url: string | null
+  github_url: string | null
+  portfolio_url: string | null
   created_at: string
   updated_at: string
 }
@@ -24,6 +36,10 @@ interface ProfileResponse {
 interface ProfileUpdateRequest {
   display_name?: string
   avatar_url?: string
+  phone?: string | null
+  linkedin_url?: string | null
+  github_url?: string | null
+  portfolio_url?: string | null
 }
 
 function toProfile(row: ProfileResponse): Profile {
@@ -31,6 +47,10 @@ function toProfile(row: ProfileResponse): Profile {
     id: row.id,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
+    phone: row.phone ?? null,
+    linkedinUrl: row.linkedin_url ?? null,
+    githubUrl: row.github_url ?? null,
+    portfolioUrl: row.portfolio_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -56,6 +76,10 @@ export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
   const body: ProfileUpdateRequest = {}
   if (update.displayName !== undefined) body.display_name = update.displayName
   if (update.avatarUrl !== undefined) body.avatar_url = update.avatarUrl
+  if (update.phone !== undefined) body.phone = update.phone
+  if (update.linkedinUrl !== undefined) body.linkedin_url = update.linkedinUrl
+  if (update.githubUrl !== undefined) body.github_url = update.githubUrl
+  if (update.portfolioUrl !== undefined) body.portfolio_url = update.portfolioUrl
   const data = await apiClient.patch<ProfileResponse>('/profiles/me', body)
   return toProfile(data)
 }
