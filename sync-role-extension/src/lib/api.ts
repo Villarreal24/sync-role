@@ -1,22 +1,47 @@
 import { BACKEND_URL } from "./constants"
-import { getAuthHeaders } from "./auth"
+import { getAuthHeaders, refreshStoredToken, clearStoredToken } from "./auth"
 import type { ScrapeRequest, ScrapeResponse, JobPostingPayload } from "./types"
 
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+/**
+ * Centralized fetch wrapper for all extension API calls.
+ *
+ * Handles for every request:
+ * - Auth header injection (Bearer token from chrome.storage)
+ * - 401 → refresh token → retry once
+ * - 401 after refresh fails → clear stored tokens
+ *
+ * Consumers still check `res.ok` for their specific error handling.
+ * This keeps the retry logic in ONE place instead of per-endpoint.
+ */
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const authHeaders = await getAuthHeaders()
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-      ...(options.headers as Record<string, string> || {}),
-    },
-  })
+
+  const doFetch = (extraHeaders: Record<string, string>): Promise<Response> =>
+    fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...extraHeaders,
+        ...(options.headers as Record<string, string> || {}),
+      },
+    })
+
+  let res = await doFetch(authHeaders)
+
+  if (res.status === 401) {
+    const newToken = await refreshStoredToken()
+    if (newToken) {
+      res = await doFetch({ Authorization: `Bearer ${newToken}` })
+    } else {
+      await clearStoredToken()
+    }
+  }
+
   return res
 }
 
 export async function scrapePage(data: ScrapeRequest): Promise<ScrapeResponse> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/scrape`, {
+  const res = await apiFetch(`${BACKEND_URL}/scrape`, {
     method: "POST",
     body: JSON.stringify(data),
   })
@@ -42,12 +67,44 @@ export async function createJob(data: JobPostingPayload): Promise<void> {
     seniority: data.seniority,
     technologies: data.technologies,
   }
-  const res = await fetchWithAuth(`${BACKEND_URL}/jobs`, {
+  const res = await apiFetch(`${BACKEND_URL}/jobs`, {
     method: "POST",
     body: JSON.stringify(body),
   })
   if (!res.ok) {
     const err = await res.text()
     throw new Error(`Create job failed (${res.status}): ${err}`)
+  }
+}
+
+export interface Profile {
+  id: string
+  display_name: string
+  avatar_url: string
+  phone: string | null
+  linkedin_url: string | null
+  github_url: string | null
+  portfolio_url: string | null
+}
+
+/**
+ * Fetch the authenticated user's profile.
+ *
+ * Error handling by status code:
+ * - 401 → handled centrally by apiFetch (refresh + retry or clear tokens)
+ * - 404 → expected for new sign-ups, returns null silently.
+ * - 400, 403, 500 → returns null silently (auxiliary feature).
+ * - Network error → returns null silently.
+ */
+export async function fetchProfile(): Promise<Profile | null> {
+  try {
+    const headers = await getAuthHeaders()
+    if (!headers.Authorization) return null
+
+    const res = await apiFetch(`${BACKEND_URL}/profiles/me`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
   }
 }
