@@ -70,9 +70,11 @@ class JobPostingResponse(BaseModel):
     seniority: str
     technologies: list[str]
     ownershipNote: list[dict] = Field(default_factory=list, alias="ownershipNote")
+    deletedAt: str | None = None
 
     @classmethod
     def from_db_row(cls, row: dict) -> "JobPostingResponse":
+        raw_deleted = row.get("deleted_at")
         return cls(
             id=row["id"],
             title=row["title"],
@@ -95,6 +97,11 @@ class JobPostingResponse(BaseModel):
             seniority=row.get("seniority", ""),
             technologies=row.get("technologies") or [],
             ownershipNote=row.get("ownership_note") or [],
+            deletedAt=(
+                raw_deleted.isoformat()
+                if isinstance(raw_deleted, datetime)
+                else str(raw_deleted) if raw_deleted else None
+            ),
         )
 
 
