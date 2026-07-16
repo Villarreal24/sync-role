@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import { useJobsCopy } from '../copy'
 import type { JobPosting, JobStatus } from '../types'
-import { Calendar, ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Calendar, ExternalLink, Trash2 } from 'lucide-react'
 import { spacing, fontSize } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/shared/components/ui/card'
@@ -33,7 +33,6 @@ export function JobCard({ job, onClick }: Props) {
   const copy = useJobsCopy()
   const commonCopy = useCommonCopy()
   const { locale } = useLocale()
-  const [showDescription, setShowDescription] = useState(false)
   const tagsRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [titleOverflowing, setTitleOverflowing] = useState(false)
@@ -52,7 +51,7 @@ export function JobCard({ job, onClick }: Props) {
     if (!showAllTechs) {
       const el = tagsRef.current
       if (el) {
-        setIsOverflowing(el.scrollHeight > el.clientHeight)
+        setIsOverflowing(el.scrollHeight - el.clientHeight > 2)
       }
     }
   }, [job.technologies, showAllTechs])
@@ -126,7 +125,7 @@ export function JobCard({ job, onClick }: Props) {
               ref={tagsRef}
               className={cn(
                 'flex flex-wrap gap-1',
-                !showAllTechs && 'max-h-[4.5rem] overflow-hidden',
+                !showAllTechs && 'max-h-[4.75rem] overflow-hidden',
               )}
             >
               {job.technologies.map((tech) => (
@@ -143,70 +142,42 @@ export function JobCard({ job, onClick }: Props) {
                 </Badge>
               ))}
             </div>
-            {isOverflowing && (
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowAllTechs(!showAllTechs)
-                }}
-                className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {showAllTechs ? copy.card.showLess : copy.card.seeMore}
-              </Button>
-            )}
+            <div className="flex items-center justify-between">
+              <div>
+                {isOverflowing && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowAllTechs(!showAllTechs)
+                    }}
+                    className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    {showAllTechs ? copy.card.showLess : copy.card.seeMore}
+                  </Button>
+                )}
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-5 w-5 text-muted-foreground"
+                  >
+                    <Calendar size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {formatCreatedAt(job.createdAt, locale)}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         )}
-
-        <div className="flex items-center justify-between">
-          {job.description && (
-            <div>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowDescription(!showDescription)
-                }}
-                className="h-auto p-0 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {showDescription ? (
-                  <>
-                    <ChevronUp size={12} /> {copy.card.hideDescription}
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown size={12} /> {copy.card.showDescription}
-                  </>
-                )}
-              </Button>
-              {showDescription && (
-                <p className={cn('mt-1 line-clamp-6 whitespace-pre-wrap text-muted-foreground', fontSize.caption)}>
-                  {job.description}
-                </p>
-              )}
-            </div>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={(e) => e.stopPropagation()}
-                className={cn('h-5 w-5 text-muted-foreground', !job.description && 'ml-auto')}
-              >
-                <Calendar size={12} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {formatCreatedAt(job.createdAt, locale)}
-            </TooltipContent>
-          </Tooltip>
-        </div>
       </CardContent>
 
       <CardFooter className={cn(spacing.cardFooter, 'border-t border-border flex items-center justify-between gap-1')}>

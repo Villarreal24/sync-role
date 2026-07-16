@@ -19,8 +19,6 @@ export interface JobsCopy {
   }
   card: {
     recruiterPrefix: string
-    showDescription: string
-    hideDescription: string
     openSource: string
     openSourceTooltip: string
     deleteJob: string
@@ -85,8 +83,6 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
     },
     card: {
       recruiterPrefix: 'Recruiter:',
-      showDescription: 'Show description',
-      hideDescription: 'Hide description',
       openSource: 'Open source',
       openSourceTooltip: 'View posting',
       deleteJob: 'Delete job',
@@ -152,8 +148,6 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
     },
     card: {
       recruiterPrefix: 'Reclutador:',
-      showDescription: 'Mostrar descripción',
-      hideDescription: 'Ocultar descripción',
       openSource: 'Abrir fuente',
       openSourceTooltip: 'Ver publicación',
       deleteJob: 'Eliminar postulación',

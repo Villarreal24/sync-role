@@ -79,21 +79,6 @@ describe('JobCard', () => {
     expect(screen.getByText('PyTorch')).toBeInTheDocument()
   })
 
-  it('toggles description visibility', async () => {
-    const user = userEvent.setup()
-    renderWithQueryClient(<JobCard job={makeJob({ description: 'A great description.' })} />)
-    expect(screen.queryByText('A great description.')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /show description/i }))
-    expect(screen.getByText('A great description.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /hide description/i }))
-    expect(screen.queryByText('A great description.')).not.toBeInTheDocument()
-  })
-
-  it('does not render description toggle if no description', () => {
-    renderWithQueryClient(<JobCard job={makeJob({ description: '' })} />)
-    expect(screen.queryByRole('button', { name: /show description/i })).not.toBeInTheDocument()
-  })
-
   it('calls the update mutation when status changes', async () => {
     const user = userEvent.setup()
     ;(apiClient.patch as ReturnType<typeof vi.fn>).mockResolvedValue({})
