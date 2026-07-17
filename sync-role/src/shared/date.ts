@@ -92,3 +92,67 @@ export function formatCreatedAt(iso: string, locale: Locale): string {
   }
   return `${wd}, ${month} ${day} at ${time} ${year}`
 }
+
+export interface RelativeTimeUnits {
+  prefix: string
+  minutesSingular: string
+  minutesPlural: string
+  hoursSingular: string
+  hoursPlural: string
+  daysSingular: string
+  daysPlural: string
+  weeksSingular: string
+  weeksPlural: string
+  monthsSingular: string
+  monthsPlural: string
+}
+
+const MINUTE = 60
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+const WEEK = 7 * DAY
+
+function parseDate(value: string): Date | null {
+  if (ISO_DATE_RE.test(value)) {
+    const [year, month, day] = value.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+  const parsed = new Date(value)
+  return isNaN(parsed.getTime()) ? null : parsed
+}
+
+type UnitKey = keyof Omit<RelativeTimeUnits, 'prefix'>
+
+const TIME_INTERVALS: { limit: number; divisor: number; singular: UnitKey; plural: UnitKey }[] = [
+  { limit: HOUR, divisor: MINUTE, singular: 'minutesSingular', plural: 'minutesPlural' },
+  { limit: DAY, divisor: HOUR, singular: 'hoursSingular', plural: 'hoursPlural' },
+  { limit: 31 * DAY, divisor: DAY, singular: 'daysSingular', plural: 'daysPlural' },
+  { limit: 9 * WEEK, divisor: WEEK, singular: 'weeksSingular', plural: 'weeksPlural' },
+  { limit: Infinity, divisor: 30 * DAY, singular: 'monthsSingular', plural: 'monthsPlural' },
+]
+
+export function formatRelativeTime(
+  value: string | undefined | null,
+  locale: Locale,
+  units: RelativeTimeUnits,
+  now: Date = new Date(),
+): string | null {
+  if (!value) return null
+
+  const date = parseDate(value)
+  if (!date) return null
+
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  const format = (n: number, singular: string, plural: string) => {
+    const word = n === 1 ? singular : plural
+    return locale === 'es' ? `${units.prefix} ${n} ${word}` : `${n} ${word} ${units.prefix}`
+  }
+
+  if (diff <= 0) return format(0, units.minutesSingular, units.minutesPlural)
+
+  const interval = TIME_INTERVALS.find((i) => diff < i.limit)!
+  const amount = Math.max(1, Math.floor(diff / interval.divisor))
+
+  return format(amount, units[interval.singular], units[interval.plural])
+}
