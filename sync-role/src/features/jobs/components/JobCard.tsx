@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useUpdateJobStatus, useDeleteJob } from '../hooks/use-jobs'
 import { useJobsCopy } from '../copy'
 import type { JobPosting, JobStatus } from '../types'
-import { Calendar, ExternalLink, Trash2 } from 'lucide-react'
+import { Calendar, Clock, ExternalLink, Trash2 } from 'lucide-react'
 import { spacing, fontSize } from '@/shared/design-tokens'
 import { TagBadge } from '@/shared/components/TagBadge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/shared/components/ui/card'
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select'
 import { cn } from '@/shared/lib/utils'
-import { formatCreatedAt } from '@/shared/date'
+import { formatCreatedAt, formatRelativeTime } from '@/shared/date'
 import { useLocale } from '@/shared/copy/locale'
 import { useCommonCopy } from '@/shared/copy/common'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip'
@@ -67,6 +67,14 @@ export function JobCard({ job, onClick }: Props) {
     setDeleteDialogOpen(true)
   }
 
+  const relativeTime = job.publishedAt
+    ? formatRelativeTime(job.publishedAt, locale, copy.card.relativeTime)
+    : null
+  const publishedTooltip = relativeTime
+    ? `${copy.card.publishedTooltipPrefix}: ${relativeTime}`
+    : null
+  const appliedTooltip = `${copy.card.appliedTooltipPrefix}: ${formatCreatedAt(job.createdAt, locale)}`
+
   return (
     <Card
       className={cn(
@@ -92,8 +100,24 @@ export function JobCard({ job, onClick }: Props) {
                 {job.title}
               </h3>
             )}
-            <p className={cn('truncate text-muted-foreground', fontSize.body)}>
-              {job.company}
+            <p className={cn('flex items-center gap-1.5 truncate text-muted-foreground', fontSize.body)}>
+              <span className="truncate">{job.company}</span>
+              {relativeTime && (
+                <>
+                  <span aria-hidden>·</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="inline-flex shrink-0 cursor-default"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Clock size={12} className="text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    {publishedTooltip && <TooltipContent>{publishedTooltip}</TooltipContent>}
+                  </Tooltip>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -116,7 +140,6 @@ export function JobCard({ job, onClick }: Props) {
         )}
         <div className={cn('flex flex-wrap gap-3 text-muted-foreground', fontSize.caption)}>
           {job.recruiterName && <span>{copy.card.recruiterPrefix} {job.recruiterName}</span>}
-          {job.publishedAt && <span>{job.publishedAt}</span>}
         </div>
 
         {job.technologies.length > 0 && (
@@ -161,18 +184,15 @@ export function JobCard({ job, onClick }: Props) {
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center cursor-default"
                     onClick={(e) => e.stopPropagation()}
-                    className="h-5 w-5 text-muted-foreground"
                   >
-                    <Calendar size={12} />
-                  </Button>
+                    <Calendar size={12} className="text-muted-foreground" />
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {formatCreatedAt(job.createdAt, locale)}
+                  {appliedTooltip}
                 </TooltipContent>
               </Tooltip>
             </div>
