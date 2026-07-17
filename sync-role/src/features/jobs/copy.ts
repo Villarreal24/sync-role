@@ -19,6 +19,8 @@ export interface JobsCopy {
   }
   card: {
     recruiterPrefix: string
+    publishedTooltipPrefix: string
+    appliedTooltipPrefix: string
     openSource: string
     openSourceTooltip: string
     deleteJob: string
@@ -26,6 +28,19 @@ export interface JobsCopy {
     deleteConfirmDescription: string
     seeMore: string
     showLess: string
+    relativeTime: {
+      prefix: string
+      minutesSingular: string
+      minutesPlural: string
+      hoursSingular: string
+      hoursPlural: string
+      daysSingular: string
+      daysPlural: string
+      weeksSingular: string
+      weeksPlural: string
+      monthsSingular: string
+      monthsPlural: string
+    }
   }
   actions: {
     viewSource: string
@@ -83,6 +98,8 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
     },
     card: {
       recruiterPrefix: 'Recruiter:',
+      publishedTooltipPrefix: 'Published',
+      appliedTooltipPrefix: 'Applied',
       openSource: 'Open source',
       openSourceTooltip: 'View posting',
       deleteJob: 'Delete job',
@@ -90,6 +107,19 @@ function makeJobsCopy(common: CommonCopy): JobsCopy {
       deleteConfirmDescription: 'Are you sure you want to delete this job? This action cannot be undone.',
       seeMore: 'See more...',
       showLess: 'Show less',
+      relativeTime: {
+        prefix: 'ago',
+        minutesSingular: 'minute',
+        minutesPlural: 'minutes',
+        hoursSingular: 'hour',
+        hoursPlural: 'hours',
+        daysSingular: 'day',
+        daysPlural: 'days',
+        weeksSingular: 'week',
+        weeksPlural: 'weeks',
+        monthsSingular: 'month',
+        monthsPlural: 'months',
+      },
     },
     actions: {
       viewSource: 'View source',
@@ -148,6 +178,8 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
     },
     card: {
       recruiterPrefix: 'Reclutador:',
+      publishedTooltipPrefix: 'Publicada',
+      appliedTooltipPrefix: 'Postulada',
       openSource: 'Abrir fuente',
       openSourceTooltip: 'Ver publicación',
       deleteJob: 'Eliminar postulación',
@@ -155,6 +187,19 @@ function makeJobsCopyEs(common: CommonCopy): JobsCopy {
       deleteConfirmDescription: '¿Estás seguro de que deseas eliminar esta postulación? Esta acción no se puede deshacer.',
       seeMore: 'Ver más...',
       showLess: 'Ver menos',
+      relativeTime: {
+        prefix: 'hace',
+        minutesSingular: 'minuto',
+        minutesPlural: 'minutos',
+        hoursSingular: 'hora',
+        hoursPlural: 'horas',
+        daysSingular: 'día',
+        daysPlural: 'días',
+        weeksSingular: 'semana',
+        weeksPlural: 'semanas',
+        monthsSingular: 'mes',
+        monthsPlural: 'meses',
+      },
     },
     actions: {
       viewSource: 'Ver fuente',
