@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { apiClient, ApiError } from '@/core/api/client'
 
 export interface Profile {
@@ -56,6 +57,8 @@ function toProfile(row: ProfileResponse): Profile {
   }
 }
 
+const PROFILE_QUERY_KEY = ['profile'] as const
+
 /**
  * Fetch the authenticated user's profile.
  * Returns null when the profile row does not exist yet (Supabase signup
@@ -82,4 +85,17 @@ export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
   if (update.portfolioUrl !== undefined) body.portfolio_url = update.portfolioUrl
   const data = await apiClient.patch<ProfileResponse>('/profiles/me', body)
   return toProfile(data)
+}
+
+/**
+ * React Query hook that fetches the user profile.
+ * Returns null when the profile row does not exist (new signups).
+ */
+export function useProfile() {
+  return useQuery<Profile | null>({
+    queryKey: PROFILE_QUERY_KEY,
+    queryFn: getProfile,
+    staleTime: 5 * 60 * 1000, // 5 min
+    retry: false,
+  })
 }

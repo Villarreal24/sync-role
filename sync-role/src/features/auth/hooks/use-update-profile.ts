@@ -1,31 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateProfile, type Profile, type ProfileUpdate } from '../api/profiles'
-import { useAuthStore } from '../store/auth.store'
+
+const PROFILE_QUERY_KEY = ['profile'] as const
 
 /**
  * TanStack Query mutation for PATCH /api/v1/profiles/me.
  *
  * On success:
- *  - Updates the auth store with the new displayName / avatarUrl
- *    (so the sidebar avatar updates immediately without a re-fetch).
- *  - Invalidates the overview stats query so any open dashboard
- *    re-fetches with the new profile fields.
+ *  - Invalidates the profile query so the sidebar/profile page re-fetches
+ *  - Invalidates the overview stats query for dashboard updates
  */
 export function useUpdateProfile() {
-  const setProfile = useAuthStore((s) => s.setProfile)
   const queryClient = useQueryClient()
 
   return useMutation<Profile, Error, ProfileUpdate>({
     mutationFn: updateProfile,
-    onSuccess: (data) => {
-      setProfile(
-        data.displayName,
-        data.avatarUrl,
-        data.phone,
-        data.linkedinUrl,
-        data.githubUrl,
-        data.portfolioUrl,
-      )
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
       void queryClient.invalidateQueries({ queryKey: ['overview', 'stats'] })
     },
   })

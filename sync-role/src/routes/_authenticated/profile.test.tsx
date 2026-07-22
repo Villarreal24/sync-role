@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -10,13 +10,26 @@ import {
   Outlet,
 } from '@tanstack/react-router'
 import { ProfileRoute } from '@/features/auth/components/ProfileRoute'
-import { useAuthStore } from '@/features/auth/store/auth.store'
+
+vi.mock('@/features/auth/hooks/use-auth', () => ({
+  useAuth: () => ({
+    user: { id: 'u-1', email: 'luis@gmail.com' },
+    loading: false,
+  }),
+}))
+
+vi.mock('@/features/auth/api/profiles', () => ({
+  useProfile: vi.fn(),
+  useAuth: undefined,
+}))
+
+import { useProfile } from '@/features/auth/api/profiles'
 
 vi.mock('@/core/api/client', () => ({
   apiClient: { get: vi.fn(), patch: vi.fn() },
+  AuthError: class AuthError extends Error { constructor() { super('auth') } },
+  ApiError: class ApiError extends Error { status: number; constructor(m: string, s: number) { super(m); this.status = s } },
 }))
-
-import { apiClient } from '@/core/api/client'
 
 function renderProfile() {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
@@ -44,19 +57,11 @@ function renderProfile() {
 
 describe('Profile route smoke test', () => {
   beforeEach(() => {
-    useAuthStore.setState({
-      user: {
-        id: 'u-1',
-        email: 'luis@gmail.com',
-        displayName: 'Luis Villarreal',
-        avatarUrl: '',
-      },
-      token: 't',
-      refreshToken: 'r',
-      isAuthenticated: true,
-      profileHydrated: true,
-    })
-    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(useProfile).mockReturnValue({
+      data: { id: 'u-1', displayName: 'Luis Villarreal', avatarUrl: '', phone: null, linkedinUrl: null, githubUrl: null, portfolioUrl: null, createdAt: '', updatedAt: '' },
+      isLoading: false,
+      isError: false,
+    } as any)
   })
 
   it('mounts without crashing on /profile', () => {

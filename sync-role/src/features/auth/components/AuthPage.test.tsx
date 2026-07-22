@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AuthPage } from './AuthPage'
-import { useAuthStore } from '../store/auth.store'
 
 const mockLogin = vi.fn()
 const mockRegister = vi.fn()
@@ -12,6 +11,9 @@ vi.mock('../hooks/use-auth', () => ({
   useAuth: () => ({
     login: mockLogin,
     register: mockRegister,
+    user: null,
+    session: null,
+    loading: false,
   }),
 }))
 
@@ -22,17 +24,12 @@ vi.mock('@tanstack/react-router', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useSearch: () => ({}),
   }
 })
 
 describe('AuthPage', () => {
   beforeEach(() => {
-    useAuthStore.setState({
-      token: null,
-      refreshToken: null,
-      user: null,
-      isAuthenticated: false,
-    })
     vi.restoreAllMocks()
     mockLogin.mockReset()
     mockRegister.mockReset()
@@ -70,26 +67,5 @@ describe('AuthPage', () => {
     await user.click(toggleButton)
 
     expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument()
-  })
-
-  it('captures access_token, refresh_token, user_id, email, display_name and avatar_url from URL params', () => {
-    window.history.replaceState(
-      {},
-      '',
-      '/auth?access_token=at&refresh_token=rt&user_id=u1&email=a%40b.com&display_name=Luis%20Villarreal&avatar_url=https%3A%2F%2Fexample.com%2Fme.png',
-    )
-    render(<AuthPage />)
-
-    const state = useAuthStore.getState()
-    expect(state.token).toBe('at')
-    expect(state.refreshToken).toBe('rt')
-    expect(state.user).toEqual({
-      id: 'u1',
-      email: 'a@b.com',
-      displayName: 'Luis Villarreal',
-      avatarUrl: 'https://example.com/me.png',
-    })
-    expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
-    expect(window.location.search).toBe('')
   })
 })

@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 import { ProfileMenu } from './ProfileMenu'
 import { useThemeStore } from '@/features/theme/theme.store'
-import { useAuthStore } from '@/features/auth/store/auth.store'
 
 const mockNavigate = vi.fn()
 const mockLogout = vi.fn()
@@ -14,7 +13,6 @@ vi.mock('@/features/auth/hooks/use-auth', () => ({
     logout: mockLogout,
     login: vi.fn(),
     register: vi.fn(),
-    refreshAuth: vi.fn(),
   }),
 }))
 
@@ -41,12 +39,6 @@ function renderMenu() {
 describe('ProfileMenu', () => {
   beforeEach(() => {
     useThemeStore.setState({ theme: 'system', resolvedTheme: null })
-    useAuthStore.setState({
-      user: { id: 'u1', email: 'a@b.com', displayName: 'A B', avatarUrl: '' },
-      token: 't',
-      refreshToken: 'r',
-      isAuthenticated: true,
-    })
     mockNavigate.mockReset()
     mockLogout.mockReset()
   })
@@ -94,8 +86,6 @@ describe('ProfileMenu', () => {
     renderMenu()
     await user.click(screen.getByText('Open menu'))
     await user.click(screen.getByText('Log out'))
-    // logout() in use-auth.ts owns the navigation to /auth with
-    // replace: true. ProfileMenu just delegates to it.
     expect(mockLogout).toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
   })
