@@ -11,19 +11,14 @@ class AuthLoginRequest(BaseModel):
     password: str
 
 
-class AuthRefreshRequest(BaseModel):
-    refresh_token: str
-
-
 class AuthUserResponse(BaseModel):
     id: str
     email: str
 
 
 class AuthResponse(BaseModel):
-    access_token: str
-    refresh_token: str
     user: AuthUserResponse
+    message: str | None = None
 
 
 class AuthMessageResponse(BaseModel):

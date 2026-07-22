@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://syncroleapi-production.up.railway.app/api/:path*"
+    }
+  ]
+}
