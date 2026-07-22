@@ -1,6 +1,10 @@
 export const BACKEND_URL =
   process.env.PLASMO_PUBLIC_BACKEND_URL || "http://localhost:8000/api/v1"
 
+// Frontend domain for cookie reading via chrome.cookies API
+// Extension reads the sb-*-auth-token cookie from this domain
+export const FRONTEND_DOMAIN = "sync-role.vercel.app"
+
 export const WORK_MODE_OPTIONS = ["", "Remote", "Hybrid", "On-site"]
 
 export const EMPLOYMENT_TYPE_OPTIONS = [

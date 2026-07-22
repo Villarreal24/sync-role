@@ -1,43 +1,28 @@
 import { BACKEND_URL } from "./constants"
-import { getAuthHeaders, refreshStoredToken, clearStoredToken } from "./auth"
+import { getAuthHeaders } from "./auth"
 import type { ScrapeRequest, ScrapeResponse, JobPostingPayload } from "./types"
 
 /**
  * Centralized fetch wrapper for all extension API calls.
  *
- * Handles for every request:
- * - Auth header injection (Bearer token from chrome.storage)
- * - 401 → refresh token → retry once
- * - 401 after refresh fails → clear stored tokens
- *
- * Consumers still check `res.ok` for their specific error handling.
- * This keeps the retry logic in ONE place instead of per-endpoint.
+ * Uses credentials: 'include' to send cookies with requests
+ * (the httpOnly Supabase session cookie is sent automatically).
+ * Falls back to injecting Cookie header from chrome.cookies API
+ * when credentials: 'include' can't send cross-domain cookies
+ * (extension on ATS → API on separate origin).
  */
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const authHeaders = await getAuthHeaders()
 
-  const doFetch = (extraHeaders: Record<string, string>): Promise<Response> =>
-    fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...extraHeaders,
-        ...(options.headers as Record<string, string> || {}),
-      },
-    })
-
-  let res = await doFetch(authHeaders)
-
-  if (res.status === 401) {
-    const newToken = await refreshStoredToken()
-    if (newToken) {
-      res = await doFetch({ Authorization: `Bearer ${newToken}` })
-    } else {
-      await clearStoredToken()
-    }
-  }
-
-  return res
+  return fetch(url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+      ...(options.headers as Record<string, string> || {}),
+    },
+  })
 }
 
 export async function scrapePage(data: ScrapeRequest): Promise<ScrapeResponse> {
@@ -89,18 +74,9 @@ export interface Profile {
 
 /**
  * Fetch the authenticated user's profile.
- *
- * Error handling by status code:
- * - 401 → handled centrally by apiFetch (refresh + retry or clear tokens)
- * - 404 → expected for new sign-ups, returns null silently.
- * - 400, 403, 500 → returns null silently (auxiliary feature).
- * - Network error → returns null silently.
  */
 export async function fetchProfile(): Promise<Profile | null> {
   try {
-    const headers = await getAuthHeaders()
-    if (!headers.Authorization) return null
-
     const res = await apiFetch(`${BACKEND_URL}/profiles/me`)
     if (!res.ok) return null
     return await res.json()

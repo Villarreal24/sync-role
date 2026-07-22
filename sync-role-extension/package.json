@@ -27,10 +27,12 @@
   },
   "manifest": {
     "permissions": [
-      "storage"
+      "storage",
+      "cookies"
     ],
     "host_permissions": [
-      "https://*/*"
+      "*://sync-role.vercel.app/*",
+      "*://localhost:3000/*"
     ]
   }
 }

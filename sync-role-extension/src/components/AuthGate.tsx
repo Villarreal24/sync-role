@@ -1,9 +1,5 @@
 import { useState, useEffect, type ReactNode } from "react"
-import {
-  getStoredToken,
-  isTokenExpired,
-  refreshStoredToken,
-} from "../lib/auth"
+import { hasSession } from "../lib/auth"
 
 type AuthState = "loading" | "authenticated" | "unauthenticated"
 
@@ -25,16 +21,11 @@ export function AuthGate({
 
     async function checkAuth() {
       try {
-        let token = await getStoredToken()
-
-        if (token && isTokenExpired(token)) {
-          token = await refreshStoredToken()
-        }
+        const loggedIn = await hasSession()
 
         if (!cancelled) {
-          const isAuthenticated = token !== null && !isTokenExpired(token)
-          setAuthState(isAuthenticated ? "authenticated" : "unauthenticated")
-          onAuthStateChange?.(isAuthenticated)
+          setAuthState(loggedIn ? "authenticated" : "unauthenticated")
+          onAuthStateChange?.(loggedIn)
         }
       } catch {
         if (!cancelled) {

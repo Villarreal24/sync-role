@@ -1,64 +1,88 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { getStoredToken, setStoredToken, clearStoredToken } from "./auth"
+import { hasSession, getAuthHeaders, getSessionCookieHeader } from "./auth"
 
-// Mock chrome.storage.local
-const mockStorage = {
-  get: vi.fn(),
-  set: vi.fn(),
-  remove: vi.fn(),
-}
+// Mock chrome.cookies.getAll
+const mockCookiesGetAll = vi.fn()
 
 vi.stubGlobal("chrome", {
-  storage: {
-    local: mockStorage,
+  cookies: {
+    getAll: mockCookiesGetAll,
+  },
+  action: {
+    setBadgeText: vi.fn(),
+    setBadgeBackgroundColor: vi.fn(),
   },
 })
 
-describe("getStoredToken", () => {
+describe("getSessionCookieHeader", () => {
   beforeEach(() => {
-    mockStorage.get.mockReset()
-    mockStorage.set.mockReset()
-    mockStorage.remove.mockReset()
+    mockCookiesGetAll.mockReset()
   })
 
-  it("returns token when stored", async () => {
-    mockStorage.get.mockResolvedValue({ syncrole_token: "test-jwt-token" })
-    const token = await getStoredToken()
-    expect(token).toBe("test-jwt-token")
-    expect(mockStorage.get).toHaveBeenCalledWith("syncrole_token")
+  it("returns cookie header when session cookie exists", async () => {
+    mockCookiesGetAll.mockResolvedValue([
+      { name: "sb-kicwqgyzxygujewlvxpv-auth-token", value: "base64-encoded-value" },
+    ])
+    const header = await getSessionCookieHeader()
+    expect(header).toBe("sb-kicwqgyzxygujewlvxpv-auth-token=base64-encoded-value")
   })
 
-  it("returns null when no token stored", async () => {
-    mockStorage.get.mockResolvedValue({})
-    const token = await getStoredToken()
-    expect(token).toBeNull()
+  it("returns null when no session cookie exists", async () => {
+    mockCookiesGetAll.mockResolvedValue([])
+    const header = await getSessionCookieHeader()
+    expect(header).toBeNull()
+  })
+
+  it("returns null when cookies API fails", async () => {
+    mockCookiesGetAll.mockRejectedValue(new Error("permission denied"))
+    const header = await getSessionCookieHeader()
+    expect(header).toBeNull()
+  })
+
+  it("ignores cookies that are not Supabase session cookies", async () => {
+    mockCookiesGetAll.mockResolvedValue([
+      { name: "other-cookie", value: "value" },
+      { name: "another-cookie", value: "value2" },
+    ])
+    const header = await getSessionCookieHeader()
+    expect(header).toBeNull()
   })
 })
 
-describe("setStoredToken", () => {
+describe("getAuthHeaders", () => {
   beforeEach(() => {
-    mockStorage.get.mockReset()
-    mockStorage.set.mockReset()
-    mockStorage.remove.mockReset()
+    mockCookiesGetAll.mockReset()
   })
 
-  it("stores token in chrome.storage.local", async () => {
-    mockStorage.set.mockResolvedValue(undefined)
-    await setStoredToken("new-jwt-token")
-    expect(mockStorage.set).toHaveBeenCalledWith({ syncrole_token: "new-jwt-token" })
+  it("returns Cookie header when session exists", async () => {
+    mockCookiesGetAll.mockResolvedValue([
+      { name: "sb-kicwqgyzxygujewlvxpv-auth-token", value: "token-value" },
+    ])
+    const headers = await getAuthHeaders()
+    expect(headers).toEqual({ Cookie: "sb-kicwqgyzxygujewlvxpv-auth-token=token-value" })
+  })
+
+  it("returns empty object when no session", async () => {
+    mockCookiesGetAll.mockResolvedValue([])
+    const headers = await getAuthHeaders()
+    expect(headers).toEqual({})
   })
 })
 
-describe("clearStoredToken", () => {
+describe("hasSession", () => {
   beforeEach(() => {
-    mockStorage.get.mockReset()
-    mockStorage.set.mockReset()
-    mockStorage.remove.mockReset()
+    mockCookiesGetAll.mockReset()
   })
 
-  it("removes token from chrome.storage.local", async () => {
-    mockStorage.remove.mockResolvedValue(undefined)
-    await clearStoredToken()
-    expect(mockStorage.remove).toHaveBeenCalledWith("syncrole_token")
+  it("returns true when session cookie exists", async () => {
+    mockCookiesGetAll.mockResolvedValue([
+      { name: "sb-kicwqgyzxygujewlvxpv-auth-token", value: "value" },
+    ])
+    expect(await hasSession()).toBe(true)
+  })
+
+  it("returns false when no session cookie", async () => {
+    mockCookiesGetAll.mockResolvedValue([])
+    expect(await hasSession()).toBe(false)
   })
 })

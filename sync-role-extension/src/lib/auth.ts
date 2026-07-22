@@ -1,103 +1,76 @@
-import { BACKEND_URL } from "./constants"
+import { FRONTEND_DOMAIN } from "./constants"
 
-const TOKEN_KEY = "syncrole_token"
-const REFRESH_TOKEN_KEY = "syncrole_refresh_token"
+// The Supabase session cookie name prefix matches sb-{ref}-auth-token
+// Since we can't predict the exact ref at build time, we match the prefix
+const SESSION_COOKIE_PREFIX = "sb-"
+const SESSION_COOKIE_SUFFIX = "-auth-token"
 
-// --- Token expiration helpers ---
-
-export function getTokenExpiry(token: string): number | null {
+/**
+ * Parse the Supabase SSR cookie value to extract the access token.
+ *
+ * Cookie format: base64url(JSON.stringify([access_token, refresh_token, user, expires_at]))
+ */
+function extractAccessToken(cookieValue: string): string | null {
   try {
-    const payload = token.split(".")[1]
-    if (!payload) return null
-    const decoded = JSON.parse(atob(payload))
-    return decoded.exp || null
-  } catch {
-    return null
-  }
-}
-
-export function isTokenExpired(token: string): boolean {
-  const exp = getTokenExpiry(token)
-  if (exp === null) return true
-  return Date.now() / 1000 >= exp
-}
-
-// --- chrome.storage.local helpers ---
-
-export async function getStoredToken(): Promise<string | null> {
-  const result = await chrome.storage.local.get(TOKEN_KEY)
-  return result[TOKEN_KEY] || null
-}
-
-export async function setStoredToken(token: string): Promise<void> {
-  await chrome.storage.local.set({ [TOKEN_KEY]: token })
-}
-
-export async function clearStoredToken(): Promise<void> {
-  await chrome.storage.local.remove(TOKEN_KEY)
-  await chrome.storage.local.remove(REFRESH_TOKEN_KEY)
-}
-
-export async function getStoredRefreshToken(): Promise<string | null> {
-  const result = await chrome.storage.local.get(REFRESH_TOKEN_KEY)
-  return result[REFRESH_TOKEN_KEY] || null
-}
-
-export async function setStoredTokens(
-  token: string,
-  refreshToken: string
-): Promise<void> {
-  await chrome.storage.local.set({
-    [TOKEN_KEY]: token,
-    [REFRESH_TOKEN_KEY]: refreshToken,
-  })
-}
-
-// --- Token refresh ---
-
-export async function refreshStoredToken(): Promise<string | null> {
-  const refreshToken = await getStoredRefreshToken()
-  if (!refreshToken) return null
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-    if (!res.ok) {
-      await clearStoredToken()
-      return null
+    const padded = cookieValue + "=".repeat((4 - (cookieValue.length % 4)) % 4)
+    const decoded = atob(padded)
+    const parts = JSON.parse(decoded)
+    if (Array.isArray(parts) && parts.length >= 1 && typeof parts[0] === "string") {
+      return parts[0]
     }
-    const data = await res.json()
-    await setStoredTokens(data.access_token, data.refresh_token)
-    return data.access_token
+    return null
   } catch {
-    await clearStoredToken()
     return null
   }
 }
 
-// --- Auth header helper ---
+/**
+ * Get the session cookie from the FE domain using chrome.cookies API.
+ * Returns the full Cookie header value if a session exists, null otherwise.
+ */
+export async function getSessionCookieHeader(): Promise<string | null> {
+  try {
+    const cookies = await chrome.cookies.getAll({
+      domain: FRONTEND_DOMAIN,
+    })
 
-export async function getAuthHeaders(): Promise<Record<string, string>> {
-  let token = await getStoredToken()
+    const sessionCookie = cookies.find(
+      (c) => c.name.startsWith(SESSION_COOKIE_PREFIX) && c.name.endsWith(SESSION_COOKIE_SUFFIX),
+    )
 
-  if (token && isTokenExpired(token)) {
-    token = await refreshStoredToken()
+    if (!sessionCookie) return null
+    return `${sessionCookie.name}=${sessionCookie.value}`
+  } catch {
+    return null
   }
+}
 
-  if (token) {
-    return { Authorization: `Bearer ${token}` }
+/**
+ * Get auth headers for API requests.
+ * Returns the Cookie header if a session exists, empty object otherwise.
+ */
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const cookieHeader = await getSessionCookieHeader()
+  if (cookieHeader) {
+    return { Cookie: cookieHeader }
   }
   return {}
 }
 
-// --- Badge update ---
+/**
+ * Check if the user has an active session by looking for the Supabase cookie.
+ */
+export async function hasSession(): Promise<boolean> {
+  const header = await getSessionCookieHeader()
+  return header !== null
+}
 
+/**
+ * Update the extension badge based on auth state.
+ */
 export async function updateAuthBadge(): Promise<void> {
-  const token = await getStoredToken()
-  if (token && !isTokenExpired(token)) {
+  const session = await hasSession()
+  if (session) {
     chrome.action.setBadgeText({ text: "" })
     chrome.action.setBadgeBackgroundColor({ color: "#22c55e" })
   } else {
