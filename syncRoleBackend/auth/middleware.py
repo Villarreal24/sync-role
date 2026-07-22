@@ -76,17 +76,22 @@ class AuthMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
-        # Read session cookie
-        cookie_value = request.cookies.get(_SESSION_COOKIE_NAME)
-        if not cookie_value:
-            return JSONResponse(
-                status_code=401, content={"detail": "Missing authentication token"}
-            )
+        # Read access_token from Authorization header or session cookie
+        auth_header = request.headers.get("Authorization", "").removeprefix("Bearer ")
+        if auth_header:
+            access_token = auth_header
+        else:
+            cookie_value = request.cookies.get(_SESSION_COOKIE_NAME)
+            if not cookie_value:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Missing authentication token"},
+                )
+            access_token = _extract_access_token_from_cookie(cookie_value)
 
-        access_token = _extract_access_token_from_cookie(cookie_value)
         if not access_token:
             return JSONResponse(
-                status_code=401, content={"detail": "Invalid session cookie"}
+                status_code=401, content={"detail": "Invalid authentication token"}
             )
 
         # Validate with Supabase
