@@ -1,42 +1,30 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { getSupabaseBrowserClient } from '@/core/supabase/client'
-import type { Session, User } from '@supabase/supabase-js'
+import { fetchSession } from '@/core/api/client'
 
 const API_BASE = import.meta.env.BACKEND_API_URL
 
+export interface AuthUser {
+  id: string
+  email: string | null
+  user_metadata: Record<string, unknown>
+  app_metadata: Record<string, unknown>
+}
+
 export interface AuthState {
-  user: User | null
-  session: Session | null
+  user: AuthUser | null
   loading: boolean
 }
 
 export function useAuth() {
-  const [state, setState] = useState<AuthState>({ user: null, session: null, loading: true })
+  const [state, setState] = useState<AuthState>({ user: null, loading: true })
   const navigate = useNavigate()
 
   useEffect(() => {
-    const client = getSupabaseBrowserClient()
-
-    // Check current session from cookies
-    client.auth.getSession().then(({ data: { session } }) => {
-      setState({
-        user: session?.user ?? null,
-        session,
-        loading: false,
-      })
+    // Check current session via backend endpoint (reads httpOnly cookie server-side)
+    fetchSession().then(({ user }) => {
+      setState({ user, loading: false })
     })
-
-    // Subscribe to auth state changes
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      setState({
-        user: session?.user ?? null,
-        session,
-        loading: false,
-      })
-    })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   const register = useCallback(async (email: string, password: string) => {
@@ -49,11 +37,10 @@ export function useAuth() {
       const err = await res.json()
       throw new Error(err.detail || 'Registration failed')
     }
-    // Backend sets httpOnly cookie — refresh session state
-    const client = getSupabaseBrowserClient()
-    const { data: { session } } = await client.auth.getSession()
-    if (session) {
-      setState({ user: session.user, session, loading: false })
+    // Backend sets httpOnly cookie — fetch session from backend endpoint
+    const { user } = await fetchSession()
+    if (user) {
+      setState({ user, loading: false })
       navigate({ to: '/' })
     }
   }, [navigate])
@@ -68,11 +55,10 @@ export function useAuth() {
       const err = await res.json()
       throw new Error(err.detail || 'Login failed')
     }
-    // Backend sets httpOnly cookie — refresh session state
-    const client = getSupabaseBrowserClient()
-    const { data: { session } } = await client.auth.getSession()
-    if (session) {
-      setState({ user: session.user, session, loading: false })
+    // Backend sets httpOnly cookie — fetch session from backend endpoint
+    const { user } = await fetchSession()
+    if (user) {
+      setState({ user, loading: false })
       navigate({ to: '/' })
     }
   }, [navigate])
@@ -90,15 +76,12 @@ export function useAuth() {
     } catch {
       // Best effort — clear client state
     }
-    const client = getSupabaseBrowserClient()
-    await client.auth.signOut()
-    setState({ user: null, session: null, loading: false })
+    setState({ user: null, loading: false })
     navigate({ to: '/auth', replace: true })
   }, [navigate])
 
   return {
     user: state.user,
-    session: state.session,
     loading: state.loading,
     register,
     login,

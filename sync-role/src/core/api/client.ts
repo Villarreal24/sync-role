@@ -1,5 +1,41 @@
 const API_BASE = import.meta.env.BACKEND_API_URL
 
+interface SessionUser {
+  id: string
+  email: string | null
+  user_metadata: Record<string, unknown>
+  app_metadata: Record<string, unknown>
+}
+
+interface SessionResponse {
+  user: SessionUser | null
+  session: { access_token: string } | null
+}
+
+/**
+ * Fetch the current session from the backend's /auth/session endpoint.
+ *
+ * The backend reads the httpOnly Supabase session cookie and validates
+ * the access_token with Supabase. This avoids needing document.cookie
+ * access to httpOnly cookies which browsers block.
+ *
+ * Returns minimal session info needed for auth state and API calls.
+ */
+export async function fetchSession(): Promise<{ user: SessionUser | null; accessToken: string | null }> {
+  const API_BASE = import.meta.env.BACKEND_API_URL
+  try {
+    const res = await fetch(`${API_BASE}/auth/session`, {
+      credentials: 'include',
+    })
+    if (!res.ok) return { user: null, accessToken: null }
+    const data: SessionResponse = await res.json()
+    if (!data.user || !data.session) return { user: null, accessToken: null }
+    return { user: data.user, accessToken: data.session.access_token }
+  } catch {
+    return { user: null, accessToken: null }
+  }
+}
+
 class AuthError extends Error {
   constructor(message: string) {
     super(message)

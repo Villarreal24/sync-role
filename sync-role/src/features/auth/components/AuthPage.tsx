@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { getSupabaseBrowserClient } from '@/core/supabase/client'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
 import { GoogleOAuthButton } from './GoogleOAuthButton'
@@ -17,11 +18,18 @@ export function AuthPage() {
   const navigate = useNavigate()
   const search = useSearch({ from: '__root__' }) as Record<string, string>
 
-  // Handle Google OAuth redirect params (user_id, email, display_name, avatar_url)
+  // Handle Google OAuth callback: hydrate @supabase/ssr client with tokens
   useEffect(() => {
-    if (search.user_id && search.email) {
-      // Backend redirected after Google OAuth with profile info but no tokens
-      // Supabase SSR client will read the cookie set by backend
+    const { access_token, refresh_token } = search
+    if (access_token && refresh_token) {
+      const client = getSupabaseBrowserClient()
+      client.auth.setSession({ access_token, refresh_token }).then(({ data: { session } }) => {
+        if (session) {
+          navigate({ to: '/' })
+        }
+      })
+    } else if (search.user_id && search.email) {
+      // Fallback: navigate to / and let getSession determine state
       navigate({ to: '/' })
     }
   }, [search, navigate])

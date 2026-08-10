@@ -6,6 +6,16 @@ import { AuthPage } from './AuthPage'
 const mockLogin = vi.fn()
 const mockRegister = vi.fn()
 const mockNavigate = vi.fn()
+const mockSetSession = vi.fn()
+const mockUseSearch = vi.fn().mockReturnValue({})
+
+vi.mock('@/core/supabase/client', () => ({
+  getSupabaseBrowserClient: () => ({
+    auth: {
+      setSession: mockSetSession,
+    },
+  }),
+}))
 
 vi.mock('../hooks/use-auth', () => ({
   useAuth: () => ({
@@ -17,16 +27,12 @@ vi.mock('../hooks/use-auth', () => ({
   }),
 }))
 
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
-    '@tanstack/react-router',
-  )
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-    useSearch: () => ({}),
-  }
-})
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+  useSearch: () => mockUseSearch(),
+  Link: ({ children, ...props }: { children: React.ReactNode; to: string }) =>
+    <a href={props.to}>{children}</a>,
+}))
 
 describe('AuthPage', () => {
   beforeEach(() => {
@@ -67,5 +73,32 @@ describe('AuthPage', () => {
     await user.click(toggleButton)
 
     expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument()
+  })
+
+  describe('OAuth callback', () => {
+    beforeEach(() => {
+      mockUseSearch.mockReturnValue({})
+      mockSetSession.mockReset()
+      mockSetSession.mockResolvedValue({ data: { session: { user: { id: 'abc' } } } })
+    })
+
+    it('redirects to / on user_id param without calling setSession', async () => {
+      mockUseSearch.mockReturnValue({ user_id: 'abc', email: 'test@test.com' })
+      render(<AuthPage />)
+
+      await vi.waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
+      })
+      expect(mockSetSession).not.toHaveBeenCalled()
+    })
+
+    it('still calls setSession when access_token present', async () => {
+      mockUseSearch.mockReturnValue({ access_token: 'tok', refresh_token: 'ref' })
+      render(<AuthPage />)
+
+      await vi.waitFor(() => {
+        expect(mockSetSession).toHaveBeenCalledWith({ access_token: 'tok', refresh_token: 'ref' })
+      })
+    })
   })
 })

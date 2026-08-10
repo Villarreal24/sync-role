@@ -4,7 +4,7 @@ import { HeadContent, Scripts, createRootRoute, useRouter, useLocation } from '@
 import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
-import { getSupabaseBrowserClient } from '@/core/supabase/client'
+import { fetchSession } from '@/core/api/client'
 import { ThemeController } from '@/features/theme/ThemeController'
 import { ThemeScript } from '@/features/theme/ThemeScript'
 import { CopyProvider } from '@/shared/copy/locale'
@@ -64,22 +64,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   useEffect(() => {
-    const client = getSupabaseBrowserClient()
-
-    client.auth.getSession().then(({ data: { session } }) => {
+    fetchSession().then(({ user }) => {
       setSessionChecked(true)
       const isAuthRoute = location.pathname === '/auth'
 
-      if (!session && !isAuthRoute) {
+      if (!user && !isAuthRoute) {
         router.navigate({ to: '/auth', replace: true })
         return
       }
 
-      if (session && isAuthRoute) {
+      if (user && isAuthRoute) {
         router.navigate({ to: '/', replace: true })
         return
       }
-    })
+    }).catch(() => setSessionChecked(true))
   }, [location.pathname, router])
 
   if (!sessionChecked) {
