@@ -32,7 +32,8 @@
     ],
     "host_permissions": [
       "*://sync-role.vercel.app/*",
-      "*://localhost:3000/*"
+      "*://localhost:3000/*",
+      "*://localhost:8000/*"
     ]
   }
 }

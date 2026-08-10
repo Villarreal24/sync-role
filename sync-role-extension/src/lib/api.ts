@@ -5,11 +5,12 @@ import type { ScrapeRequest, ScrapeResponse, JobPostingPayload } from "./types"
 /**
  * Centralized fetch wrapper for all extension API calls.
  *
- * Uses credentials: 'include' to send cookies with requests
- * (the httpOnly Supabase session cookie is sent automatically).
- * Falls back to injecting Cookie header from chrome.cookies API
- * when credentials: 'include' can't send cross-domain cookies
- * (extension on ATS → API on separate origin).
+ * Auth is forwarded via Authorization: Bearer header (extracted from
+ * the httpOnly Supabase session cookie by getAuthHeaders()). The backend
+ * validates the JWT directly — no cookie forwarding needed.
+ *
+ * Uses credentials: 'include' solely for any same-origin cookies the
+ * extension server may set. Cross-origin auth relies on the Bearer token.
  */
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const authHeaders = await getAuthHeaders()

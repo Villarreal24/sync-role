@@ -1,4 +1,4 @@
-import { FRONTEND_URL } from "./constants"
+import { BACKEND_URL, FRONTEND_URL } from "./constants"
 
 const SESSION_COOKIE_PREFIX = "sb-"
 
@@ -11,11 +11,17 @@ try {
   debugLog = () => {}
 }
 
-function extractAccessToken(cookieValue: string): string | null {
+export function extractAccessToken(cookieValue: string): string | null {
   try {
     debugLog("extractAccessToken input length:", cookieValue.length, "prefix:", cookieValue.slice(0, 10))
-    const raw = cookieValue.startsWith("base64-") ? cookieValue.slice(7) : cookieValue
-    debugLog("after strip base64- prefix, raw length:", raw.length)
+
+    // Normalize: trim whitespace, strip JSON-string wrapping, strip base64- prefix
+    let raw = cookieValue.trim()
+    // Chrome may wrap cookie values in JSON double-quotes — strip first
+    if (raw.startsWith('"') && raw.endsWith('"')) raw = raw.slice(1, -1)
+    if (raw.startsWith("base64-")) raw = raw.slice(7)
+
+    debugLog("after normalize, raw length:", raw.length, "prefix:", raw.slice(0, 10))
     const standard = raw.replace(/-/g, "+").replace(/_/g, "/")
     const padded = standard + "=".repeat((4 - (standard.length % 4)) % 4)
     const decoded = atob(padded)
@@ -33,42 +39,106 @@ function extractAccessToken(cookieValue: string): string | null {
   }
 }
 
-async function findSessionCookie(): Promise<chrome.cookies.Cookie | null> {
+async function findAndStoreSession(
+  cookies: { name: string; value: string }[],
+): Promise<string | null> {
+  const sessionCookie = cookies.find(
+    (c) => c.name.startsWith(SESSION_COOKIE_PREFIX) && c.name.endsWith("-auth-token"),
+  )
+  if (sessionCookie?.value) {
+    debugLog("  session cookie found:", sessionCookie.name)
+    const token = extractAccessToken(sessionCookie.value)
+    if (token) {
+      await chrome.storage.local.set({ "sb-session-token": token })
+      return token
+    }
+  }
+  return null
+}
+
+export async function getAccessToken(): Promise<string | null> {
+  // 1) Try chrome.storage.local first (fast path — background listener stored the
+  //    already-extracted JWT, so no base64 decode needed here).
+  try {
+    debugLog("getAccessToken: checking chrome.storage.local")
+    const result = await chrome.storage.local.get("sb-session-token")
+    const storedToken = result["sb-session-token"]
+    if (storedToken) {
+      // Issue 1 — Stale token guard: verify the session cookie still exists
+      debugLog("getAccessToken: found JWT in storage, verifying cookie")
+      const allCookies = await chrome.cookies.getAll({})
+      const cookieStillExists = allCookies.some(
+        (c) => c.name.startsWith(SESSION_COOKIE_PREFIX) && c.name.endsWith("-auth-token"),
+      )
+      if (cookieStillExists) {
+        return storedToken
+      }
+      debugLog("getAccessToken: session cookie gone, clearing stale token")
+      await chrome.storage.local.remove("sb-session-token")
+      // Fall through to tier 2/3
+    }
+    debugLog("getAccessToken: nothing in storage, trying cookie APIs")
+  } catch (err) {
+    debugLog("getAccessToken: storage error:", err)
+  }
+
+  // 2) Try chrome.cookies.getAll({ url }) — works for cookies scoped to exact origin
   try {
     const urlsToTry = [FRONTEND_URL, `${FRONTEND_URL}/`]
     for (const url of urlsToTry) {
       debugLog("chrome.cookies.getAll({ url:", url, "})")
       const allCookies = await chrome.cookies.getAll({ url })
       debugLog("  ->", allCookies.length, "cookies")
-      if (allCookies.length === 0) continue
       allCookies.forEach((c) =>
         debugLog("  cookie:", c.name, "len:", (c.value || "").length, "domain:", c.domain, "secure:", c.secure, "httpOnly:", c.httpOnly),
       )
-      const sessionCookie = allCookies.find(
-        (c) => c.name.startsWith(SESSION_COOKIE_PREFIX) && c.name.endsWith("-auth-token"),
-      )
-      debugLog("  session cookie found (exact match):", !!sessionCookie)
-      if (sessionCookie) debugLog("  session cookie value present:", !!sessionCookie.value)
-      if (sessionCookie?.value) return sessionCookie
+      const token = await findAndStoreSession(allCookies)
+      if (token) return token
     }
-    debugLog("no session cookie found in any URL variant")
-    return null
   } catch (err) {
-    debugLog("findSessionCookie error:", err)
-    return null
+    debugLog("chrome.cookies.getAll({ url }) error:", err)
   }
-}
 
-export async function getAccessToken(): Promise<string | null> {
-  const cookie = await findSessionCookie()
-  if (!cookie) {
-    debugLog("getAccessToken: no session cookie found")
-    return null
+  // 3) Try chrome.cookies.getAll({}) without filter — returns ALL cookies accessible
+  //    via host_permissions, regardless of URL/domain scope quirks.
+  try {
+    debugLog("chrome.cookies.getAll({}) — no filter, all accessible cookies")
+    const allCookies = await chrome.cookies.getAll({})
+    debugLog("  ->", allCookies.length, "total accessible cookies")
+    allCookies.forEach((c) =>
+      debugLog("  cookie:", c.name, "domain:", c.domain, "path:", c.path),
+    )
+    const token = await findAndStoreSession(allCookies)
+    if (token) return token
+  } catch (err) {
+    debugLog("chrome.cookies.getAll({}) error:", err)
   }
-  debugLog("getAccessToken: cookie found, extracting token")
-  const token = extractAccessToken(cookie.value)
-  debugLog("getAccessToken: token extracted:", !!token)
-  return token
+
+  // 4) Backend /auth/session endpoint fallback
+  //    The cookie APIs above may not find the sb-*-auth-token cookie when the
+  //    extension lacks host_permissions for the backend origin. The /auth/session
+  //    endpoint reads the httpOnly cookie server-side, so we just need to include
+  //    cookies via credentials: 'include' — no chrome.cookies needed.
+  try {
+    debugLog("getAccessToken: trying backend /auth/session endpoint")
+    const res = await fetch(`${BACKEND_URL}/auth/session`, {
+      credentials: "include",
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.session?.access_token) {
+        debugLog("getAccessToken: session endpoint returned token, storing")
+        await chrome.storage.local.set({ "sb-session-token": data.session.access_token })
+        return data.session.access_token
+      }
+    }
+    debugLog("getAccessToken: /auth/session returned no session")
+  } catch (err) {
+    debugLog("getAccessToken: /auth/session fetch error:", err)
+  }
+
+  debugLog("getAccessToken: no session cookie found")
+  return null
 }
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
