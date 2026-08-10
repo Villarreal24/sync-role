@@ -302,13 +302,18 @@ class TestAuthRoutes:
         assert _TEST_COOKIE_NAME in set_cookie
         assert "HttpOnly" in set_cookie
 
-    def test_logout_without_cookie_returns_401(self):
-        """POST /api/v1/auth/logout without cookie → 401."""
+    def test_logout_without_cookie_returns_200(self):
+        """POST /api/v1/auth/logout without cookie → 200 (public endpoint clears cookie)."""
         from syncRoleBackend.main import app
+        from syncRoleBackend.auth import get_session_cookie_name
 
         client = TestClient(app)
         resp = client.post("/api/v1/auth/logout")
-        assert resp.status_code == 401
+        assert resp.status_code == 200
+        # Should still clear the cookie even without a valid session
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert get_session_cookie_name() in set_cookie
+        assert "Max-Age=0" in set_cookie
 
 
 class TestGoogleOAuthCallback:

@@ -1,24 +1,16 @@
+import asyncio
 import base64
 import json
 import logging
-import re
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from syncRoleBackend.auth import get_session_cookie_name
 from syncRoleBackend.config import settings
 
 logger = logging.getLogger("sync_role.auth.middleware")
-
-# Extract project ref from supabase_url for cookie name
-# e.g. https://abc123.supabase.co → abc123
-_PROJECT_REF_MATCH = re.search(
-    r"https://([^.]+)\.supabase\.co",
-    settings.supabase_url,
-)
-_PROJECT_REF = _PROJECT_REF_MATCH.group(1) if _PROJECT_REF_MATCH else ""
-_SESSION_COOKIE_NAME = f"sb-{_PROJECT_REF}-auth-token"
 
 
 def _extract_access_token_from_cookie(cookie_value: str) -> str | None:
@@ -39,14 +31,18 @@ def _extract_access_token_from_cookie(cookie_value: str) -> str | None:
 
 
 _LITE_CLIENT = None
+_LITE_CLIENT_LOCK = asyncio.Lock()
 
 
-def _get_auth_client():
-    """Get a lightweight supabase client for auth validation (cached)."""
+async def _get_auth_client():
+    """Get a lightweight supabase client for auth validation (cached, thread-safe)."""
     global _LITE_CLIENT
     if _LITE_CLIENT is None:
-        from supabase import create_client
-        _LITE_CLIENT = create_client(settings.supabase_url, settings.supabase_anon_key)
+        async with _LITE_CLIENT_LOCK:
+            # Double-checked locking: another coroutine may have created it while we waited
+            if _LITE_CLIENT is None:
+                from supabase import create_client
+                _LITE_CLIENT = create_client(settings.supabase_url, settings.supabase_anon_key)
     return _LITE_CLIENT
 
 
@@ -63,6 +59,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         public_paths = (
             "/api/v1/auth/register",
             "/api/v1/auth/login",
+            "/api/v1/auth/logout",
             "/api/v1/auth/google",
             "/api/v1/auth/google/callback",
             "/api/v1/docs",
@@ -81,7 +78,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if auth_header:
             access_token = auth_header
         else:
-            cookie_value = request.cookies.get(_SESSION_COOKIE_NAME)
+            cookie_value = request.cookies.get(get_session_cookie_name())
             if not cookie_value:
                 return JSONResponse(
                     status_code=401,
@@ -96,7 +93,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Validate with Supabase
         try:
-            client = _get_auth_client()
+            client = await _get_auth_client()
             response = client.auth.get_user(access_token)
         except Exception as e:
             logger.warning("get_user failed: %s", e)
