@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useAuthCopy } from '@/features/auth/copy'
 import { useMounted } from '@/shared/hooks/use-mounted'
 import { useUpdateProfile } from '@/features/auth/hooks/use-update-profile'
+import { useProfile } from '@/features/auth/api/profiles'
 import { formatPhoneDisplay } from '@/shared/lib/format'
 import type { ProfileUpdate } from '@/features/auth/api/profiles'
 import type { ExtraFieldConfig, ProfileFormState } from '@/features/auth/components/profile-form.types'
 
 export function useProfileForm() {
   const mounted = useMounted()
-  const user = useAuthStore((s) => s.user)
+  const { data: profile } = useProfile()
   const updateProfile = useUpdateProfile()
   const copy = useAuthCopy()
 
@@ -24,17 +24,17 @@ export function useProfileForm() {
   const [savedAt, setSavedAt] = useState<number | null>(null)
 
   useEffect(() => {
-    if (user && mounted) {
+    if (profile && mounted) {
       setForm({
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        phone: user.phone ?? '',
-        linkedinUrl: user.linkedinUrl ?? '',
-        githubUrl: user.githubUrl ?? '',
-        portfolioUrl: user.portfolioUrl ?? '',
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        phone: profile.phone ?? '',
+        linkedinUrl: profile.linkedinUrl ?? '',
+        githubUrl: profile.githubUrl ?? '',
+        portfolioUrl: profile.portfolioUrl ?? '',
       })
     }
-  }, [user, mounted])
+  }, [profile, mounted])
 
   const updateField = useCallback(
     <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
@@ -80,12 +80,12 @@ export function useProfileForm() {
   )
 
   const isDirty =
-    form.displayName !== user?.displayName ||
-    form.avatarUrl !== user?.avatarUrl ||
-    form.phone !== (user?.phone ?? '') ||
-    form.linkedinUrl !== (user?.linkedinUrl ?? '') ||
-    form.githubUrl !== (user?.githubUrl ?? '') ||
-    form.portfolioUrl !== (user?.portfolioUrl ?? '')
+    form.displayName !== profile?.displayName ||
+    form.avatarUrl !== profile?.avatarUrl ||
+    form.phone !== (profile?.phone ?? '') ||
+    form.linkedinUrl !== (profile?.linkedinUrl ?? '') ||
+    form.githubUrl !== (profile?.githubUrl ?? '') ||
+    form.portfolioUrl !== (profile?.portfolioUrl ?? '')
   const isPending = updateProfile.isPending
   const errorMessage = updateProfile.error?.message
 
@@ -107,7 +107,7 @@ export function useProfileForm() {
 
   return {
     mounted,
-    user,
+    profile,
     form,
     savedAt,
     copy,

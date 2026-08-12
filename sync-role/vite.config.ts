@@ -8,6 +8,15 @@ import { nitro } from 'nitro/vite'
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   envPrefix: ['VITE_', 'BACKEND_'],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: false,
+      },
+    },
+  },
   plugins: [
     devtools(),
     tailwindcss(),

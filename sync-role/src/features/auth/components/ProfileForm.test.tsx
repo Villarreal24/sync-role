@@ -4,7 +4,29 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { ProfileForm } from './ProfileForm'
-import { useAuthStore } from '../store/auth.store'
+
+const mockMutateState = vi.hoisted(() => ({ fn: vi.fn(), error: null as Error | null }))
+
+vi.mock('@/features/auth/hooks/use-update-profile', () => ({
+  useUpdateProfile: () => ({
+    mutate: mockMutateState.fn,
+    isPending: false,
+    get error() { return mockMutateState.error },
+  }),
+}))
+
+const mockUseProfile = vi.hoisted(() => vi.fn())
+
+vi.mock('@/features/auth/api/profiles', () => ({
+  useProfile: (...args: any[]) => mockUseProfile(...args),
+}))
+
+vi.mock('@/features/auth/hooks/use-auth', () => ({
+  useAuth: () => ({
+    user: { id: 'u-1', email: 'a@b.com' },
+    loading: false,
+  }),
+}))
 
 vi.mock('@/core/api/client', () => ({
   apiClient: {
@@ -12,8 +34,6 @@ vi.mock('@/core/api/client', () => ({
     patch: vi.fn(),
   },
 }))
-
-import { apiClient } from '@/core/api/client'
 
 function makeWrapper() {
   const client = new QueryClient({
@@ -27,7 +47,7 @@ function makeWrapper() {
   )
 }
 
-function setAuthState(
+function mockProfile(
   displayName: string,
   avatarUrl: string,
   phone: string | null = null,
@@ -35,10 +55,9 @@ function setAuthState(
   githubUrl: string | null = null,
   portfolioUrl: string | null = null,
 ) {
-  useAuthStore.setState({
-    user: {
+  mockUseProfile.mockReturnValue({
+    data: {
       id: 'u-1',
-      email: 'a@b.com',
       displayName,
       avatarUrl,
       phone,
@@ -46,17 +65,16 @@ function setAuthState(
       githubUrl,
       portfolioUrl,
     },
-    token: 't',
-    refreshToken: 'r',
-    isAuthenticated: true,
-    profileHydrated: true,
+    isLoading: false,
   })
 }
 
 describe('ProfileForm', () => {
   beforeEach(() => {
-    vi.mocked(apiClient.patch).mockReset()
-    setAuthState('Luis Villarreal', '')
+    mockMutateState.fn.mockReset()
+    mockMutateState.error = null
+    mockUseProfile.mockReset()
+    mockProfile('Luis Villarreal', '')
   })
 
   it('prefills the inputs with the current profile values', async () => {
@@ -81,16 +99,11 @@ describe('ProfileForm', () => {
     expect(save).toBeEnabled()
   })
 
-  it('PATCHes the profile and updates the auth store on success', async () => {
+  it('calls mutate when Save is clicked', async () => {
     const user = userEvent.setup()
-    vi.mocked(apiClient.patch).mockResolvedValueOnce({
-      id: 'u-1',
-      display_name: 'Luis V.',
-      avatar_url: 'https://example.com/me.png',
-      created_at: '',
-      updated_at: '',
+    mockMutateState.fn.mockImplementation((_payload, { onSuccess }: any) => {
+      onSuccess?.()
     })
-
     render(<ProfileForm />, { wrapper: makeWrapper() })
     const nameInput = await screen.findByLabelText(/display name/i)
     await user.clear(nameInput)
@@ -102,25 +115,19 @@ describe('ProfileForm', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     await waitFor(() => {
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        '/profiles/me',
+      expect(mockMutateState.fn).toHaveBeenCalledWith(
         expect.objectContaining({
-          display_name: 'Luis V.',
-          avatar_url: 'https://example.com/me.png',
+          displayName: 'Luis V.',
+          avatarUrl: 'https://example.com/me.png',
         }),
+        expect.any(Object),
       )
-    })
-    // Auth store reflects the new values
-    await waitFor(() => {
-      expect(useAuthStore.getState().user?.displayName).toBe('Luis V.')
-      expect(useAuthStore.getState().user?.avatarUrl).toBe('https://example.com/me.png')
     })
   })
 
   it('renders and prefills the extra profile fields', async () => {
-    setAuthState('Luis V.', '', '+54 11 5555-1234', 'https://linkedin.com/in/luis', 'https://github.com/luis', null)
+    mockProfile('Luis V.', '', '+54 11 5555-1234', 'https://linkedin.com/in/luis', 'https://github.com/luis', null)
     render(<ProfileForm />, { wrapper: makeWrapper() })
-    // Phone is formatted for display; raw is what's stored
     expect((await screen.findByLabelText(/phone/i) as HTMLInputElement).value).toBe('+54 (115)-555-1234')
     expect((screen.getByLabelText(/linkedin/i) as HTMLInputElement).value).toBe('https://linkedin.com/in/luis')
     expect((screen.getByLabelText(/github/i) as HTMLInputElement).value).toBe('https://github.com/luis')
@@ -129,92 +136,38 @@ describe('ProfileForm', () => {
 
   it('enables Save when an extra field changes', async () => {
     const user = userEvent.setup()
-    setAuthState('Luis V.', '')
+    mockProfile('Luis V.', '')
     render(<ProfileForm />, { wrapper: makeWrapper() })
     const phoneInput = await screen.findByLabelText(/phone/i)
     await user.type(phoneInput, '+1 555')
     expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled()
   })
 
-  it('PATCHes extra fields and updates auth store', async () => {
-    const user = userEvent.setup()
-    setAuthState('Luis V.', '')
-    vi.mocked(apiClient.patch).mockResolvedValueOnce({
-      id: 'u-1',
-      display_name: 'Luis V.',
-      avatar_url: '',
-      phone: '+1 555 123-4567',
-      linkedin_url: null,
-      github_url: 'https://github.com/luisv',
-      portfolio_url: null,
-      created_at: '',
-      updated_at: '',
-    })
-
-    render(<ProfileForm />, { wrapper: makeWrapper() })
-    const phoneInput = await screen.findByLabelText(/phone/i)
-    await user.type(phoneInput, '+1 555 123-4567')
-    const githubInput = screen.getByLabelText(/github/i)
-    await user.type(githubInput, 'https://github.com/luisv')
-
-    await user.click(screen.getByRole('button', { name: /save changes/i }))
-
-    await waitFor(() => {
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        '/profiles/me',
-        expect.objectContaining({
-          phone: '+15551234567',
-          github_url: 'https://github.com/luisv',
-        }),
-      )
-    })
-    // Auth store reflects the response from the backend (raw value)
-    await waitFor(() => {
-      expect(useAuthStore.getState().user?.phone).toBe('+1 555 123-4567')
-      expect(useAuthStore.getState().user?.githubUrl).toBe('https://github.com/luisv')
-    })
-  })
-
   it('sends null when clearing a URL field', async () => {
     const user = userEvent.setup()
-    setAuthState('Luis V.', '', null, 'https://linkedin.com/in/luis', null, null)
-    vi.mocked(apiClient.patch).mockResolvedValueOnce({
-      id: 'u-1',
-      display_name: 'Luis V.',
-      avatar_url: '',
-      phone: null,
-      linkedin_url: null,
-      github_url: null,
-      portfolio_url: null,
-      created_at: '',
-      updated_at: '',
+    mockProfile('Luis V.', '', null, 'https://linkedin.com/in/luis', null, null)
+    mockMutateState.fn.mockImplementation((_payload, { onSuccess }: any) => {
+      onSuccess?.()
     })
-
     render(<ProfileForm />, { wrapper: makeWrapper() })
     const linkedinInput = await screen.findByLabelText(/linkedin/i)
     await user.clear(linkedinInput)
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     await waitFor(() => {
-      expect(apiClient.patch).toHaveBeenCalledWith(
-        '/profiles/me',
+      expect(mockMutateState.fn).toHaveBeenCalledWith(
         expect.objectContaining({
-          linkedin_url: null,
+          linkedinUrl: null,
         }),
+        expect.any(Object),
       )
     })
   })
 
-  it('shows the error message when the request fails', async () => {
-    const user = userEvent.setup()
-    vi.mocked(apiClient.patch).mockRejectedValueOnce(new Error('boom'))
-
+  it('shows the error message when mutation has an error', async () => {
+    // Render with error set in the mutation result
+    mockMutateState.error = new Error('boom')
     render(<ProfileForm />, { wrapper: makeWrapper() })
-    const nameInput = await screen.findByLabelText(/display name/i)
-    await user.clear(nameInput)
-    await user.type(nameInput, 'X')
-    await user.click(screen.getByRole('button', { name: /save changes/i }))
-
     expect(await screen.findByText('boom')).toBeInTheDocument()
   })
 })

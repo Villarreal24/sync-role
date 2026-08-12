@@ -1,10 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
 import { Sidebar } from './Sidebar'
 import { useSidebarStore } from '@/shared/store/sidebar.store'
-import { useAuthStore } from '@/features/auth/store/auth.store'
+vi.mock('@/features/auth/hooks/use-auth', () => ({
+  useAuth: () => ({
+    user: { email: 'jane.smith@example.com' },
+  }),
+}))
+
+vi.mock('@/features/auth/api/profiles', () => ({
+  useProfile: vi.fn(() => ({
+    data: { id: 'u1', displayName: 'Jane Smith', avatarUrl: '', phone: null, linkedinUrl: null, githubUrl: null, portfolioUrl: null, createdAt: '', updatedAt: '' },
+    isLoading: false,
+    isError: false,
+  })),
+}))
 
 vi.mock('@tanstack/react-router', async () => {
   const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
@@ -29,27 +42,19 @@ vi.mock('@tanstack/react-router', async () => {
 })
 
 function renderSidebar() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <TooltipProvider>
-      <Sidebar />
-    </TooltipProvider>,
+    <QueryClientProvider client={client}>
+      <TooltipProvider>
+        <Sidebar />
+      </TooltipProvider>
+    </QueryClientProvider>,
   )
 }
 
 describe('Sidebar', () => {
   beforeEach(() => {
     useSidebarStore.setState({ collapsed: false })
-    useAuthStore.setState({
-      user: {
-        id: 'u1',
-        email: 'jane.smith@example.com',
-        displayName: 'Jane Smith',
-        avatarUrl: '',
-      },
-      token: 't',
-      refreshToken: 'r',
-      isAuthenticated: true,
-    })
   })
 
   it('renders expanded with the brand, nav items, and footer by default', () => {
@@ -63,8 +68,6 @@ describe('Sidebar', () => {
   it('renders collapsed with nav items and the brand logo in the header', () => {
     useSidebarStore.setState({ collapsed: true })
     renderSidebar()
-    // The brand text is no longer rendered when collapsed; the logo
-    // carries the brand identity via its aria-label.
     expect(screen.queryByText('Sync Role')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Sync Role' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument()

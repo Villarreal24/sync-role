@@ -1,18 +1,49 @@
 """Tests for stats module: GET /api/v1/stats/overview + cache layer."""
 
-import time
+import base64
+import json
 from unittest.mock import MagicMock, patch
 
-import jwt as pyjwt
 import pytest
 from fastapi.testclient import TestClient
 
-from syncRoleBackend.config import settings
 from syncRoleBackend.main import app
 
-_TEST_JWT_SECRET = "test-secret-that-is-at-least-32-chars-long-for-hs256!!"
+# Re-import for the cache tests
+import time as _time
+from syncRoleBackend.config import settings as _settings
+
 _TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 _TEST_USER_EMAIL = "test@example.com"
+
+_COOKIE_NAME = "sb-kicwqgyzxygujewlvxpv-auth-token"
+
+client = TestClient(app)
+
+
+def _make_cookie_value(access_token: str = "test-at") -> str:
+    payload = json.dumps([
+        access_token,
+        "test-rt",
+        {"id": _TEST_USER_ID, "email": _TEST_USER_EMAIL, "aud": "authenticated", "role": "authenticated"},
+        9999999999,
+    ])
+    return base64.b64encode(payload.encode()).decode()
+
+
+@pytest.fixture(autouse=True)
+def _patch_auth():
+    with patch("syncRoleBackend.auth.middleware._get_auth_client") as mock_get_auth:
+        mock_auth_client = MagicMock()
+        mock_user = MagicMock()
+        mock_user.id = _TEST_USER_ID
+        mock_user.email = _TEST_USER_EMAIL
+        mock_response = MagicMock()
+        mock_response.user = mock_user
+        mock_auth_client.auth.get_user.return_value = mock_response
+        mock_get_auth.return_value = mock_auth_client
+        client.cookies.set(_COOKIE_NAME, _make_cookie_value())
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -24,21 +55,6 @@ def _clear_stats_cache():
     invalidate_overview_stats_cache()
     yield
     invalidate_overview_stats_cache()
-
-
-def _make_token(exp_offset: int = 3600) -> str:
-    payload = {
-        "sub": _TEST_USER_ID,
-        "email": _TEST_USER_EMAIL,
-        "aud": "authenticated",
-        "role": "authenticated",
-        "iat": int(time.time()),
-        "exp": int(time.time()) + exp_offset,
-    }
-    return pyjwt.encode(payload, _TEST_JWT_SECRET, algorithm="HS256")
-
-
-_AUTH_HEADER = {"Authorization": f"Bearer {_make_token()}"}
 
 
 def _empty_payload() -> dict:
@@ -86,22 +102,14 @@ class TestOverviewEndpoint:
     """Integration: GET /api/v1/stats/overview."""
 
     def test_returns_200_with_valid_payload(self):
-        with (
-            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-            patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb,
-        ):
+        with patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
-            # mock_sb is the return value of get_supabase().
-            # Then mock_sb.rpc(...).execute() navigates the chain.
             mock_sb.rpc.return_value.execute.return_value = (
                 _mock_rpc_response(_empty_payload())
             )
             mock_get_sb.return_value = mock_sb
 
-            client = TestClient(app)
-            resp = client.get(
-                "/api/v1/stats/overview", headers=_AUTH_HEADER
-            )
+            resp = client.get("/api/v1/stats/overview")
             assert resp.status_code == 200
             data = resp.json()
             assert data["totals"]["saved"] == 0
@@ -110,18 +118,14 @@ class TestOverviewEndpoint:
             assert len(data["activity"]) == 8
 
     def test_returns_zeroes_for_user_with_no_jobs(self):
-        with (
-            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-            patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb,
-        ):
+        with patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_sb.rpc.return_value.execute.return_value = (
                 _mock_rpc_response(_empty_payload())
             )
             mock_get_sb.return_value = mock_sb
 
-            client = TestClient(app)
-            resp = client.get("/api/v1/stats/overview", headers=_AUTH_HEADER)
+            resp = client.get("/api/v1/stats/overview")
             assert resp.status_code == 200
             data = resp.json()
             assert all(v == 0 for v in data["totals"].values())
@@ -161,18 +165,14 @@ class TestOverviewEndpoint:
             {"week_start": "2026-07-06", "count": 2},
         ]
 
-        with (
-            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-            patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb,
-        ):
+        with patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_sb.rpc.return_value.execute.return_value = (
                 _mock_rpc_response(payload)
             )
             mock_get_sb.return_value = mock_sb
 
-            client = TestClient(app)
-            resp = client.get("/api/v1/stats/overview", headers=_AUTH_HEADER)
+            resp = client.get("/api/v1/stats/overview")
             data = resp.json()
             assert data["totals"]["applied"] == 15
             assert data["totals"]["companies"] == 19
@@ -183,18 +183,14 @@ class TestOverviewEndpoint:
             assert data["activity"][-1]["count"] == 2
 
     def test_returns_500_on_supabase_failure_with_sanitized_detail(self):
-        with (
-            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-            patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb,
-        ):
+        with patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_sb.rpc.return_value.execute.side_effect = (
                 RuntimeError("connection refused at 10.0.0.5:5432")
             )
             mock_get_sb.return_value = mock_sb
 
-            client = TestClient(app)
-            resp = client.get("/api/v1/stats/overview", headers=_AUTH_HEADER)
+            resp = client.get("/api/v1/stats/overview")
             assert resp.status_code == 500
             detail = resp.json()["detail"]
             assert "Failed to load overview stats" in detail
@@ -203,32 +199,22 @@ class TestOverviewEndpoint:
             assert "10.0.0.5" not in detail
 
     def test_returns_200_when_rpc_returns_no_data(self):
-        """If the RPC returns no rows, Pydantic fills in defaults and
-        the user still gets a 200 (a logged-in user should always
-        see a payload, never 404)."""
-        with (
-            patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
-            patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb,
-        ):
+        """If the RPC returns no rows, Pydantic fills in defaults."""
+        with patch("syncRoleBackend.stats.queries.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
-            # Empty list → _fetch_overview_stats returns {} →
-            # Pydantic defaults to zeros and empty lists.
             mock_sb.rpc.return_value.execute.return_value.data = []
             mock_get_sb.return_value = mock_sb
 
-            client = TestClient(app)
-            resp = client.get("/api/v1/stats/overview", headers=_AUTH_HEADER)
-            # Empty payload → Pydantic defaults → 200 with zeros
+            resp = client.get("/api/v1/stats/overview")
             assert resp.status_code == 200
             data = resp.json()
             assert all(v == 0 for v in data["totals"].values())
 
     def test_requires_authentication(self):
-        """No Authorization header → 401 from auth middleware."""
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            client = TestClient(app)
-            resp = client.get("/api/v1/stats/overview")
-            assert resp.status_code == 401
+        """No session cookie → 401 from auth middleware."""
+        unauth_client = TestClient(app)
+        resp = unauth_client.get("/api/v1/stats/overview")
+        assert resp.status_code == 401
 
 
 class TestOverviewCache:

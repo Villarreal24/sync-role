@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { HeadContent, Scripts, createRootRoute, useRouter, useLocation } from '@tanstack/react-router'
 
 import { QueryClientProvider } from '@tanstack/react-query'
 
 import { getQueryClient } from '@/core/api/query-client'
-import { useAuthStore } from '@/features/auth/store/auth.store'
+import { fetchSession } from '@/core/api/client'
 import { ThemeController } from '@/features/theme/ThemeController'
 import { ThemeScript } from '@/features/theme/ThemeScript'
 import { CopyProvider } from '@/shared/copy/locale'
@@ -59,34 +59,30 @@ export const Route = createRootRoute({
 })
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const profileHydrated = useAuthStore((s) => s.profileHydrated)
+  const [sessionChecked, setSessionChecked] = useState(false)
   const router = useRouter()
   const location = useLocation()
 
   useEffect(() => {
-    // Only run client-side — SSR renders the page without auth check
-    const isAuthRoute = location.pathname === '/auth'
+    fetchSession().then(({ user }) => {
+      setSessionChecked(true)
+      const isAuthRoute = location.pathname === '/auth'
 
-    if (!isAuthenticated && !isAuthRoute) {
-      router.navigate({ to: '/auth', replace: true })
-      return
-    }
+      if (!user && !isAuthRoute) {
+        router.navigate({ to: '/auth', replace: true })
+        return
+      }
 
-    if (isAuthenticated && isAuthRoute) {
-      router.navigate({ to: '/', replace: true })
-      return
-    }
+      if (user && isAuthRoute) {
+        router.navigate({ to: '/', replace: true })
+        return
+      }
+    }).catch(() => setSessionChecked(true))
+  }, [location.pathname, router])
 
-    // Hydrate profile (displayName + avatarUrl) once per session.
-    // The profileHydrated flag is set in the hydrateProfile() finally
-    // block, so a 404 from the backend (e.g. user signed up via
-    // email/password with no profile row) still counts as hydrated
-    // and the guard doesn't loop re-fetching on every render.
-    if (isAuthenticated && !profileHydrated) {
-      void useAuthStore.getState().hydrateProfile()
-    }
-  }, [isAuthenticated, profileHydrated, location.pathname, router])
+  if (!sessionChecked) {
+    return null
+  }
 
   return <>{children}</>
 }

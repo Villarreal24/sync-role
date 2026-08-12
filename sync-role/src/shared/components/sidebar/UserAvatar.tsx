@@ -1,4 +1,5 @@
-import { useAuthStore } from '@/features/auth/store/auth.store'
+import { useAuth } from '@/features/auth/hooks/use-auth'
+import { useProfile } from '@/features/auth/api/profiles'
 import { useMounted } from '@/shared/hooks/use-mounted'
 import { cn } from '@/shared/lib/utils'
 
@@ -32,16 +33,13 @@ function initialsFromDisplayName(name: string): string {
 }
 
 export function UserAvatar({ size = 'md', className }: UserAvatarProps) {
-  // SSR safety: until React mounts on the client, ignore the auth
-  // store (which on the server has no user because getCookie() returns
-  // null outside the browser) and render the neutral fallback. After
-  // mount, the store is read and the avatar re-renders with the real
-  // user data.
   const mounted = useMounted()
-  const user = useAuthStore((s) => s.user)
-  const displayName = mounted ? (user?.displayName ?? '') : ''
-  const avatarUrl = mounted ? (user?.avatarUrl ?? '') : ''
+  const { user } = useAuth()
+  const { data: profile } = useProfile()
+
   const email = mounted ? (user?.email ?? '') : ''
+  const displayName = mounted ? (profile?.displayName ?? '') : ''
+  const avatarUrl = mounted ? (profile?.avatarUrl ?? '') : ''
 
   const initials = displayName
     ? initialsFromDisplayName(displayName)

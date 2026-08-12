@@ -5,26 +5,37 @@ import type { JobPostingPayload } from "../lib/types"
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
-// Mock chrome.storage.local for auth token lookup
-const mockStorage = {
-  get: vi.fn(),
-}
-
+// Mock chrome APIs for getAuthHeaders / getAccessToken
 vi.stubGlobal("chrome", {
   storage: {
-    local: mockStorage,
+    local: {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+  cookies: {
+    getAll: vi.fn().mockResolvedValue([]),
   },
 })
 
 describe("createJob", () => {
   beforeEach(() => {
     mockFetch.mockReset()
-    mockStorage.get.mockReset()
-    // Return no stored token so requests are unauthenticated
-    mockStorage.get.mockResolvedValue({})
   })
 
+  /** Helper: get the API fetch call (skip the /auth/session endpoint call at index 0) */
+  function apiCallIndex(): number[] {
+    return mockFetch.mock.calls
+      .map((call, i) => ({ url: call[0], i }))
+      .filter(({ url }) => !url.includes('/auth/session'))
+      .map(({ i }) => i)
+  }
+
   it("should send correct camelCase body with all fields", async () => {
+    // First fetch call = /auth/session fallback in getAccessToken
+    mockFetch.mockResolvedValueOnce({ ok: false } as Response)
+    // Second fetch call = actual API call
     mockFetch.mockResolvedValueOnce({ ok: true } as Response)
 
     const payload: JobPostingPayload = {
@@ -44,8 +55,10 @@ describe("createJob", () => {
 
     await createJob(payload)
 
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    const [url, opts] = mockFetch.mock.calls[0]
+    // Find the actual API call (skip session endpoint)
+    const apiCalls = mockFetch.mock.calls.filter(([url]) => !url.includes('/auth/session'))
+    expect(apiCalls).toHaveLength(1)
+    const [url, opts] = apiCalls[0]
 
     expect(url).toContain("/jobs")
     expect(opts.method).toBe("POST")
@@ -62,6 +75,7 @@ describe("createJob", () => {
   })
 
   it("should send empty strings for missing fields", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false } as Response)
     mockFetch.mockResolvedValueOnce({ ok: true } as Response)
 
     const payload: JobPostingPayload = {
@@ -81,7 +95,9 @@ describe("createJob", () => {
 
     await createJob(payload)
 
-    const [, opts] = mockFetch.mock.calls[0]
+    const apiCalls = mockFetch.mock.calls.filter(([url]) => !url.includes('/auth/session'))
+    expect(apiCalls).toHaveLength(1)
+    const [, opts] = apiCalls[0]
     const body = JSON.parse(opts.body)
     expect(body.workMode).toBe("")
     expect(body.seniority).toBe("")
@@ -89,6 +105,7 @@ describe("createJob", () => {
   })
 
   it("should throw on non-ok response", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false } as Response)
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 400,

@@ -2,16 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginForm } from './LoginForm'
-import { useAuthStore } from '../store/auth.store'
 
 describe('LoginForm', () => {
   beforeEach(() => {
-    useAuthStore.setState({
-      token: null,
-      refreshToken: null,
-      user: null,
-      isAuthenticated: false,
-    })
+    vi.restoreAllMocks()
   })
 
   it('renders the title and form fields', () => {

@@ -1,6 +1,5 @@
+import { FRONTEND_URL } from "../lib/constants"
 import { signInContainer } from "../lib/signin-styles"
-
-const FRONTEND_URL = process.env.PLASMO_PUBLIC_FRONTEND_URL || "http://localhost:3000"
 
 export function SignInButton() {
   const handleSignIn = () => {

@@ -1,50 +1,57 @@
-"""Tests for main API endpoints — updated with auth tokens for protected routes."""
+"""Tests for main API endpoints — updated for cookie-based auth."""
 
+import base64
+import json
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-import jwt as pyjwt
 import pytest
 from fastapi.testclient import TestClient
 
 from syncRoleBackend.config import settings
 from syncRoleBackend.main import app
 
-# Test JWT secret — must match what the middleware uses
-_TEST_JWT_SECRET = "test-secret-that-is-at-least-32-chars-long-for-hs256!!"
 _TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 _TEST_USER_EMAIL = "test@example.com"
 
 client = TestClient(app)
 
 
-def _make_token(exp_offset: int = 3600) -> str:
-    """Create a test JWT with the test secret."""
-    payload = {
-        "sub": _TEST_USER_ID,
-        "email": _TEST_USER_EMAIL,
-        "aud": "authenticated",
-        "role": "authenticated",
-        "iat": int(time.time()),
-        "exp": int(time.time()) + exp_offset,
-    }
-    return pyjwt.encode(payload, _TEST_JWT_SECRET, algorithm="HS256")
+def _make_cookie_value(access_token: str = "test-at") -> str:
+    """Construct a Supabase-style session cookie value."""
+    payload = json.dumps([
+        access_token,
+        "test-rt",
+        {"id": _TEST_USER_ID, "email": _TEST_USER_EMAIL, "aud": "authenticated", "role": "authenticated"},
+        9999999999,
+    ])
+    return base64.b64encode(payload.encode()).decode()
 
 
-# Patch JWT secret globally for all tests
-pytest_plugins = []
-_token = _make_token()
-_AUTH_HEADER = {"Authorization": f"Bearer {_token}"}
+_COOKIE_NAME = "sb-kicwqgyzxygujewlvxpv-auth-token"
 
 
 @pytest.fixture(autouse=True)
 def _patch_settings():
     with (
-        patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET),
         patch("syncRoleBackend.main.get_supabase") as mock_get_sb,
+        patch("syncRoleBackend.auth.middleware._get_auth_client") as mock_get_auth,
     ):
         mock_sb = _mock_supabase()
         mock_get_sb.return_value = mock_sb
+
+        # Mock middleware auth validation
+        mock_auth_client = MagicMock()
+        mock_user = MagicMock()
+        mock_user.id = _TEST_USER_ID
+        mock_user.email = _TEST_USER_EMAIL
+        mock_response = MagicMock()
+        mock_response.user = mock_user
+        mock_auth_client.auth.get_user.return_value = mock_response
+        mock_get_auth.return_value = mock_auth_client
+
+        # Set session cookie on the test client for all requests
+        client.cookies.set(_COOKIE_NAME, _make_cookie_value())
         yield
 
 
@@ -113,7 +120,7 @@ def test_health_check():
 
 
 def test_get_jobs_returns_list():
-    resp = client.get("/api/v1/jobs", headers=_AUTH_HEADER)
+    resp = client.get("/api/v1/jobs")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
@@ -134,7 +141,7 @@ def test_create_job():
         "seniority": "Senior",
         "technologies": ["Python", "FastAPI"],
     }
-    resp = client.post("/api/v1/jobs", json=payload, headers=_AUTH_HEADER)
+    resp = client.post("/api/v1/jobs", json=payload)
     assert resp.status_code == 200
     data = resp.json()
     assert data["title"] == "Test Engineer"
@@ -157,7 +164,7 @@ def test_create_job_defaults():
         "company": "MinCorp",
         "sourceUrl": "https://min.com",
     }
-    resp = client.post("/api/v1/jobs", json=payload, headers=_AUTH_HEADER)
+    resp = client.post("/api/v1/jobs", json=payload)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "saved"
@@ -178,14 +185,12 @@ def test_update_job():
             "company": "UpdCorp",
             "sourceUrl": "https://upd.com",
         },
-        headers=_AUTH_HEADER,
     )
     job_id = create_resp.json()["id"]
 
     update_resp = client.patch(
         f"/api/v1/jobs/{job_id}",
         json={"status": "interviewing"},
-        headers=_AUTH_HEADER,
     )
     assert update_resp.status_code == 200
     assert update_resp.json()["status"] == "interviewing"
@@ -199,14 +204,12 @@ def test_update_job_partial_new_fields():
             "company": "PartCorp",
             "sourceUrl": "https://part.com",
         },
-        headers=_AUTH_HEADER,
     )
     job_id = create_resp.json()["id"]
 
     update_resp = client.patch(
         f"/api/v1/jobs/{job_id}",
         json={"seniority": "Senior", "workMode": "Remote"},
-        headers=_AUTH_HEADER,
     )
     assert update_resp.status_code == 200
     data = update_resp.json()
@@ -223,11 +226,10 @@ def test_delete_job():
             "company": "DelCorp",
             "sourceUrl": "https://del.com",
         },
-        headers=_AUTH_HEADER,
     )
     job_id = create_resp.json()["id"]
 
-    delete_resp = client.delete(f"/api/v1/jobs/{job_id}", headers=_AUTH_HEADER)
+    delete_resp = client.delete(f"/api/v1/jobs/{job_id}")
     assert delete_resp.status_code == 200
     assert delete_resp.json()["message"] == "Job deleted successfully"
 
@@ -235,7 +237,6 @@ def test_delete_job():
 def test_delete_nonexistent_job():
     resp = client.delete(
         "/api/v1/jobs/00000000-0000-0000-0000-000000000000",
-        headers=_AUTH_HEADER,
     )
     assert resp.status_code == 404
 
@@ -244,14 +245,14 @@ def test_update_nonexistent_job():
     resp = client.patch(
         "/api/v1/jobs/00000000-0000-0000-0000-000000000000",
         json={"status": "offer"},
-        headers=_AUTH_HEADER,
     )
     assert resp.status_code == 404
 
 
 def test_jobs_without_auth_returns_401():
     """Verify auth middleware blocks unauthenticated requests to /api/v1/jobs."""
-    resp = client.get("/api/v1/jobs")
+    unauth_client = TestClient(app)
+    resp = unauth_client.get("/api/v1/jobs")
     assert resp.status_code == 401
 
 

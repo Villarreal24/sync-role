@@ -12,7 +12,6 @@ import { cn } from '@/shared/lib/utils'
 export function ProfileForm() {
   const {
     mounted,
-    user,
     form,
     savedAt,
     copy,
@@ -24,7 +23,7 @@ export function ProfileForm() {
     handleSubmit,
   } = useProfileForm()
 
-  if (!mounted || !user) {
+  if (!mounted) {
     return (
       <Card className="p-6">
         <div className="flex items-start gap-6">

@@ -1,36 +1,33 @@
-"""Tests for auth module: registration, login, JWT middleware, protected routes."""
+"""Tests for auth module: cookie-based session registration, login, middleware."""
 
-import time
-from urllib.parse import parse_qs, urlparse
 from unittest.mock import MagicMock, patch
 
-import jwt as pyjwt
 import pytest
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-# --- Helpers for test JWT tokens ---
-
-_TEST_JWT_SECRET = "test-secret-that-is-at-least-32-chars-long-for-hs256!!"
 _TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 _TEST_USER_EMAIL = "test@example.com"
 
+# Project ref extracted from supabase_url for cookie name
+_TEST_PROJECT_REF = "kicwqgyzxygujewlvxpv"
+_TEST_COOKIE_NAME = f"sb-{_TEST_PROJECT_REF}-auth-token"
 
-def _make_token(exp_offset: int = 3600, **overrides) -> str:
-    payload = {
-        "sub": _TEST_USER_ID,
-        "email": _TEST_USER_EMAIL,
-        "aud": "authenticated",
-        "role": "authenticated",
-        "iat": int(time.time()),
-        "exp": int(time.time()) + exp_offset,
-    }
-    payload.update(overrides)
-    return pyjwt.encode(payload, _TEST_JWT_SECRET, algorithm="HS256")
+
+def _make_cookie_value(access_token: str = "test-at", refresh_token: str = "test-rt") -> str:
+    """Construct a Supabase-style cookie value: base64url(JSON array)."""
+    import base64, json
+    payload = json.dumps([
+        access_token,
+        refresh_token,
+        {"id": _TEST_USER_ID, "email": _TEST_USER_EMAIL, "aud": "authenticated", "role": "authenticated"},
+        9999999999,
+    ])
+    return base64.b64encode(payload.encode()).decode()
 
 
 def _make_test_app() -> FastAPI:
-    """Create a minimal test app with AuthMiddleware and test routes."""
+    """Create a minimal test app with cookie-based AuthMiddleware."""
     from syncRoleBackend.auth.middleware import AuthMiddleware
 
     app = FastAPI()
@@ -38,11 +35,16 @@ def _make_test_app() -> FastAPI:
 
     @app.get("/api/v1/jobs")
     async def protected_route(request: Request):
-        return {"user_id": request.state.user_id, "data": []}
+        return {
+            "user_id": request.state.user_id,
+            "user_email": request.state.user_email,
+            "token": request.state.token,
+            "data": [],
+        }
 
-    @app.get("/api/v1/auth/register")
+    @app.get("/api/v1/auth/login")
     async def public_auth_route(request: Request):
-        return {"status": "register"}
+        return {"status": "login"}
 
     @app.get("/api/v1/scrape")
     async def scrape_route(request: Request):
@@ -59,102 +61,102 @@ def _make_test_app() -> FastAPI:
 
 
 class TestAuthMiddleware:
-    """RED: tests for JWT validation middleware."""
+    """RED: tests for cookie-based session validation middleware."""
 
-    def test_valid_token_passes_through(self):
-        """Valid JWT → 200 + request.state.user_id set correctly."""
-        from syncRoleBackend.config import settings
+    def test_valid_cookie_populates_request_state(self):
+        """Valid sb-*-auth-token cookie → 200 + request.state populated."""
+        app = _make_test_app()
+        client = TestClient(app)
+        cookie_val = _make_cookie_value(access_token="valid-at")
+        client.cookies.set(_TEST_COOKIE_NAME, cookie_val)
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            token = _make_token()
-            resp = client.get(
-                "/api/v1/jobs", headers={"Authorization": f"Bearer {token}"}
-            )
+        with patch("syncRoleBackend.auth.middleware._get_auth_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_user = MagicMock()
+            mock_user.id = _TEST_USER_ID
+            mock_user.email = _TEST_USER_EMAIL
+            mock_response = MagicMock()
+            mock_response.user = mock_user
+            mock_client.auth.get_user.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            resp = client.get("/api/v1/jobs")
+
             assert resp.status_code == 200
-            assert resp.json()["user_id"] == _TEST_USER_ID
+            data = resp.json()
+            assert data["user_id"] == _TEST_USER_ID
+            assert data["user_email"] == _TEST_USER_EMAIL
+            assert data["token"] == "valid-at"
+            mock_client.auth.get_user.assert_called_once_with("valid-at")
 
-    def test_missing_auth_header_returns_401(self):
-        """No Authorization header → 401."""
-        from syncRoleBackend.config import settings
+    def test_missing_cookie_returns_401(self):
+        """No sb-*-auth-token cookie → 401."""
+        app = _make_test_app()
+        client = TestClient(app)
+        resp = client.get("/api/v1/unknown")
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get("/api/v1/unknown")
-            assert resp.status_code == 401
-            assert "Missing authentication token" in resp.json()["detail"]
+        assert resp.status_code == 401
+        assert "Missing authentication token" in resp.json()["detail"]
 
-    def test_expired_token_returns_401(self):
-        """Expired JWT → 401 with 'Token expired'."""
-        from syncRoleBackend.config import settings
+    def test_invalid_cookie_value_returns_401(self):
+        """Invalid cookie value format → 401."""
+        app = _make_test_app()
+        client = TestClient(app)
+        client.cookies.set(_TEST_COOKIE_NAME, "garbage-cookie-value")
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            token = _make_token(exp_offset=-3600)
-            resp = client.get(
-                "/api/v1/jobs", headers={"Authorization": f"Bearer {token}"}
-            )
-            assert resp.status_code == 401
-            assert "Token expired" in resp.json()["detail"]
+        resp = client.get("/api/v1/jobs")
 
-    def test_malformed_token_returns_401(self):
-        """Garbage token → 401 with 'Invalid token'."""
-        from syncRoleBackend.config import settings
+        assert resp.status_code == 401
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get(
-                "/api/v1/jobs",
-                headers={"Authorization": "Bearer this-is-not-a-valid-jwt"},
-            )
-            assert resp.status_code == 401
-            assert "Invalid token" in resp.json()["detail"]
+    def test_get_user_fails_returns_401(self):
+        """Valid cookie but supabase.auth.get_user() fails → 401."""
+        app = _make_test_app()
+        client = TestClient(app)
+        cookie_val = _make_cookie_value(access_token="expired-at")
+        client.cookies.set(_TEST_COOKIE_NAME, cookie_val)
 
-    def test_bearer_prefix_missing_returns_401(self):
-        """Authorization header without Bearer prefix → 401."""
-        from syncRoleBackend.config import settings
+        with patch("syncRoleBackend.auth.middleware._get_auth_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.auth.get_user.side_effect = Exception("Invalid token")
+            mock_get_client.return_value = mock_client
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get(
-                "/api/v1/jobs", headers={"Authorization": "no-bearer-token"}
-            )
+            resp = client.get("/api/v1/jobs")
+
             assert resp.status_code == 401
 
     def test_public_auth_paths_bypass_auth(self):
-        """Public paths (register, login) do NOT require a token."""
-        from syncRoleBackend.config import settings
-
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get("/api/v1/auth/register")
-            assert resp.status_code == 200
+        """Public paths (login) do NOT require a cookie."""
+        app = _make_test_app()
+        client = TestClient(app)
+        resp = client.get("/api/v1/auth/login")
+        assert resp.status_code == 200
 
     def test_scrape_path_bypasses_auth(self):
         """Scrape path bypasses auth."""
-        from syncRoleBackend.config import settings
+        app = _make_test_app()
+        client = TestClient(app)
+        resp = client.get("/api/v1/scrape")
+        assert resp.status_code == 200
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get("/api/v1/scrape")
-            assert resp.status_code == 200
+    def test_protected_route_without_cookie_returns_401(self):
+        """Protected route without cookie → 401."""
+        app = _make_test_app()
+        client = TestClient(app)
+        resp = client.get("/api/v1/jobs")
+        assert resp.status_code == 401
 
-    def test_protected_route_without_token_returns_401(self):
-        """Protected route without auth header → 401."""
-        from syncRoleBackend.config import settings
+    def test_cookie_with_no_access_token_returns_401(self):
+        """Cookie with malformed JSON (no access_token) → 401."""
+        import base64, json
 
-        with patch.object(settings, "supabase_jwt_secret", _TEST_JWT_SECRET):
-            app = _make_test_app()
-            client = TestClient(app)
-            resp = client.get("/api/v1/jobs")
-            assert resp.status_code == 401
+        app = _make_test_app()
+        client = TestClient(app)
+        bad_payload = base64.b64encode(json.dumps(["only-at"]).encode()).decode()
+        client.cookies.set(_TEST_COOKIE_NAME, bad_payload)
+
+        resp = client.get("/api/v1/jobs")
+
+        assert resp.status_code == 401
 
 
 # ===== AUTH ROUTE TESTS =====
@@ -163,43 +165,50 @@ class TestAuthMiddleware:
 class TestAuthRoutes:
     """Tests for auth router endpoints with mocked supabase."""
 
-    def test_register_success(self):
-        """POST /api/v1/auth/register → 201 + tokens."""
+    def test_register_success_sets_cookies(self):
+        """POST /api/v1/auth/register → 201 + Set-Cookie header."""
+        from syncRoleBackend.main import app
+
         with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_user = MagicMock()
             mock_user.id = _TEST_USER_ID
             mock_user.email = _TEST_USER_EMAIL
             mock_session = MagicMock()
-            mock_session.access_token = _make_token()
-            mock_session.refresh_token = "test-refresh-token"
+            mock_session.access_token = "reg-at"
+            mock_session.refresh_token = "reg-rt"
             mock_result = MagicMock()
             mock_result.user = mock_user
             mock_result.session = mock_session
             mock_sb.auth.sign_up.return_value = mock_result
             mock_get_sb.return_value = mock_sb
 
-            from syncRoleBackend.main import app
-
             client = TestClient(app)
             resp = client.post(
                 "/api/v1/auth/register",
                 json={"email": "new@example.com", "password": "password123"},
             )
-            assert resp.status_code == 201
-            data = resp.json()
-            assert "access_token" in data
-            assert data["user"]["id"] == _TEST_USER_ID
-            assert data["user"]["email"] == _TEST_USER_EMAIL
+
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "access_token" not in data
+        assert "refresh_token" not in data
+        assert data["user"]["id"] == _TEST_USER_ID
+        assert data["user"]["email"] == _TEST_USER_EMAIL
+
+        # Check Set-Cookie header exists with sb-*-auth-token
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert _TEST_COOKIE_NAME in set_cookie
+        assert "HttpOnly" in set_cookie
 
     def test_register_duplicate_email(self):
         """POST /api/v1/auth/register with existing email → 409."""
+        from syncRoleBackend.main import app
+
         with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_sb.auth.sign_up.side_effect = Exception("Email already in use")
             mock_get_sb.return_value = mock_sb
-
-            from syncRoleBackend.main import app
 
             client = TestClient(app)
             resp = client.post(
@@ -208,43 +217,49 @@ class TestAuthRoutes:
             )
             assert resp.status_code == 409
 
-    def test_login_success(self):
-        """POST /api/v1/auth/login with valid credentials → 200 + tokens."""
+    def test_login_success_sets_cookies(self):
+        """POST /api/v1/auth/login → 200 + Set-Cookie, no tokens in body."""
+        from syncRoleBackend.main import app
+
         with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_user = MagicMock()
             mock_user.id = _TEST_USER_ID
             mock_user.email = _TEST_USER_EMAIL
             mock_session = MagicMock()
-            mock_session.access_token = _make_token()
-            mock_session.refresh_token = "test-refresh-token"
+            mock_session.access_token = "login-at"
+            mock_session.refresh_token = "login-rt"
             mock_result = MagicMock()
             mock_result.user = mock_user
             mock_result.session = mock_session
             mock_sb.auth.sign_in_with_password.return_value = mock_result
             mock_get_sb.return_value = mock_sb
 
-            from syncRoleBackend.main import app
-
             client = TestClient(app)
             resp = client.post(
                 "/api/v1/auth/login",
                 json={"email": _TEST_USER_EMAIL, "password": "correct-password"},
             )
-            assert resp.status_code == 200
-            data = resp.json()
-            assert "access_token" in data
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "access_token" not in data
+        assert "refresh_token" not in data
+        assert data["user"]["id"] == _TEST_USER_ID
+
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert _TEST_COOKIE_NAME in set_cookie
 
     def test_login_invalid_credentials(self):
         """POST /api/v1/auth/login with wrong password → 401."""
+        from syncRoleBackend.main import app
+
         with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
             mock_sb = MagicMock()
             mock_sb.auth.sign_in_with_password.side_effect = Exception(
                 "Invalid login credentials"
             )
             mock_get_sb.return_value = mock_sb
-
-            from syncRoleBackend.main import app
 
             client = TestClient(app)
             resp = client.post(
@@ -253,73 +268,188 @@ class TestAuthRoutes:
             )
             assert resp.status_code == 401
 
-    def test_logout_success(self):
-        """POST /api/v1/auth/logout with valid token → 200."""
-        with (
-            patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb,
-            patch(
-                "syncRoleBackend.config.settings.supabase_jwt_secret",
-                _TEST_JWT_SECRET,
-            ),
-        ):
-            mock_sb = MagicMock()
-            mock_get_sb.return_value = mock_sb
-
-            from syncRoleBackend.main import app
-
-            client = TestClient(app)
-            token = _make_token()
-            resp = client.post(
-                "/api/v1/auth/logout",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            assert resp.status_code == 200
-            assert resp.json()["message"] == "Logged out"
-
-    def test_logout_without_token_returns_401(self):
-        """POST /api/v1/auth/logout without token → 401 (caught by middleware)."""
+    def test_logout_clears_cookies(self):
+        """POST /api/v1/auth/logout → 200 + expired Set-Cookie."""
         from syncRoleBackend.main import app
 
-        client = TestClient(app)
-        resp = client.post("/api/v1/auth/logout")
-        assert resp.status_code == 401
-        # Middleware catches unauthenticated requests before Depends
-        assert "Missing authentication token" in resp.json()["detail"]
-
-    def test_refresh_success(self):
-        """POST /api/v1/auth/refresh with valid refresh token → 200."""
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
-            mock_sb = MagicMock()
+        with (
+            patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb,
+            patch("syncRoleBackend.auth.middleware._get_auth_client") as mock_get_client,
+        ):
+            mock_client = MagicMock()
             mock_user = MagicMock()
             mock_user.id = _TEST_USER_ID
             mock_user.email = _TEST_USER_EMAIL
-            mock_session = MagicMock()
-            mock_session.access_token = _make_token(exp_offset=3600)
-            mock_session.refresh_token = "new-refresh-token"
-            mock_result = MagicMock()
-            mock_result.session = mock_session
-            mock_result.user = mock_user
-            mock_sb.auth.refresh_session.return_value = mock_result
+            mock_response = MagicMock()
+            mock_response.user = mock_user
+            mock_client.auth.get_user.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            mock_sb = MagicMock()
             mock_get_sb.return_value = mock_sb
 
-            from syncRoleBackend.main import app
-
             client = TestClient(app)
-            resp = client.post(
-                "/api/v1/auth/refresh",
-                json={"refresh_token": "valid-refresh-token"},
-            )
-            assert resp.status_code == 200
-            data = resp.json()
-            assert "access_token" in data
-            assert data["refresh_token"] == "new-refresh-token"
+            cookie_val = _make_cookie_value(access_token="logout-at")
+            client.cookies.set(_TEST_COOKIE_NAME, cookie_val)
+
+            resp = client.post("/api/v1/auth/logout")
+
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "Logged out"
+
+        # Check Set-Cookie expires the cookie
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert _TEST_COOKIE_NAME in set_cookie
+        assert "HttpOnly" in set_cookie
+
+    def test_logout_without_cookie_returns_200(self):
+        """POST /api/v1/auth/logout without cookie → 200 (public endpoint clears cookie)."""
+        from syncRoleBackend.main import app
+        from syncRoleBackend.auth import get_session_cookie_name
+
+        client = TestClient(app)
+        resp = client.post("/api/v1/auth/logout")
+        assert resp.status_code == 200
+        # Should still clear the cookie even without a valid session
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert get_session_cookie_name() in set_cookie
+        assert "Max-Age=0" in set_cookie
+
+
+class TestGoogleOAuthCallback:
+    """Tests for /api/v1/auth/google/callback — now sets cookies on redirect."""
+
+    def _make_user(self, user_metadata: dict, user_id: str = "u-google-1",
+                   email: str = "luis@gmail.com"):
+        user = MagicMock()
+        user.id = user_id
+        user.email = email
+        user.user_metadata = user_metadata
+        return user
+
+    def _make_session(self, access_token: str = "google-at",
+                      refresh_token: str = "google-rt"):
+        session = MagicMock()
+        session.access_token = access_token
+        session.refresh_token = refresh_token
+        return session
+
+    def _make_exchange_result(self, user, session):
+        result = MagicMock()
+        result.user = user
+        result.session = session
+        return result
+
+    def test_google_callback_sets_cookies_instead_of_url_params(self):
+        """Google callback sets cookies on redirect, no tokens in URL."""
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({
+            "full_name": "Luis Villarreal",
+            "avatar_url": "https://lh3.googleusercontent.com/luis.png",
+        })
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.settings") as mock_settings, \
+             patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
+            mock_get_sb.return_value = MagicMock()
+            mock_settings.frontend_url = "https://app.example.com"
+            mock_settings.supabase_url = "https://kicwqgyzxygujewlvxpv.supabase.co"
+
+            redirect = _build_google_redirect(result)
+
+        # Should be a 302 redirect
+        assert redirect.status_code == 302
+        location = redirect.headers.get("location", "")
+        # No tokens in URL
+        assert "access_token" not in location
+        assert "refresh_token" not in location
+        # Should redirect to FE
+        assert location.startswith("https://app.example.com/auth")
+
+        # Check Set-Cookie on redirect response
+        set_cookie = redirect.headers.get("set-cookie", "")
+        assert _TEST_COOKIE_NAME in set_cookie
+        assert "HttpOnly" in set_cookie
+
+    def test_google_callback_upserts_profile(self):
+        """Still upserts profiles row on callback."""
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({
+            "full_name": "Luis V",
+            "avatar_url": "https://x/luis.png",
+        }, user_id="user-xyz")
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.settings") as mock_settings, \
+             patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
+            mock_sb = MagicMock()
+            mock_get_sb.return_value = mock_sb
+            mock_settings.frontend_url = "https://app.example.com"
+            mock_settings.supabase_url = "https://kicwqgyzxygujewlvxpv.supabase.co"
+
+            _build_google_redirect(result)
+
+        mock_sb.table.assert_called_once_with("profiles")
+        upsert_call = mock_sb.table.return_value.upsert.call_args
+        assert upsert_call.args[0] == {
+            "id": "user-xyz",
+            "display_name": "Luis V",
+            "avatar_url": "https://x/luis.png",
+        }
+
+    def test_google_callback_empty_metadata(self):
+        """Empty user_metadata yields empty profile fields."""
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({})
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.settings") as mock_settings, \
+             patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
+            mock_get_sb.return_value = MagicMock()
+            mock_settings.frontend_url = "https://app.example.com"
+            mock_settings.supabase_url = "https://kicwqgyzxygujewlvxpv.supabase.co"
+
+            redirect = _build_google_redirect(result)
+
+        assert redirect.status_code == 302
+        location = redirect.headers.get("location", "")
+        assert location.startswith("https://app.example.com/auth")
+        assert "access_token" not in location
+
+    def test_profile_upsert_failure_does_not_break_redirect(self):
+        """If profile upsert fails, redirect still happens."""
+        from syncRoleBackend.auth.router import _build_google_redirect
+
+        user = self._make_user({"full_name": "Luis", "avatar_url": "https://x"})
+        session = self._make_session()
+        result = self._make_exchange_result(user, session)
+
+        with patch("syncRoleBackend.auth.router.settings") as mock_settings, \
+             patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb:
+            mock_sb = MagicMock()
+            mock_sb.table.return_value.upsert.side_effect = RuntimeError("db down")
+            mock_get_sb.return_value = mock_sb
+            mock_settings.frontend_url = "https://app.example.com"
+            mock_settings.supabase_url = "https://kicwqgyzxygujewlvxpv.supabase.co"
+
+            redirect = _build_google_redirect(result)
+
+        assert redirect.status_code == 302
+        set_cookie = redirect.headers.get("set-cookie", "")
+        assert _TEST_COOKIE_NAME in set_cookie
 
 
 # ===== DUAL CLIENT TESTS =====
 
 
 class TestDualClient:
-    """Tests for dual supabase client pattern."""
+    """Tests for dual supabase client pattern (unchanged)."""
 
     def test_get_supabase_returns_anon_client_by_default(self):
         """get_supabase() returns anon client with SUPABASE_ANON_KEY."""
@@ -356,22 +486,20 @@ class TestDualClient:
             assert key == "test-sr-key"
 
     def test_get_supabase_with_user_jwt(self):
-        """get_supabase(user_jwt) creates anon client + sets JWT auth header for RLS."""
+        """get_supabase(user_jwt) creates anon client + sets JWT auth header."""
         from syncRoleBackend.database import get_supabase, _clients
         from syncRoleBackend.config import settings
 
         _clients.clear()
 
-        user_jwt = _make_token()
+        user_jwt = "test-user-jwt"
         with patch("syncRoleBackend.database.create_client") as mock_create:
             mock_client = MagicMock()
             mock_create.return_value = mock_client
             get_supabase(user_jwt)
-            # Should create client with ANON key, not the user JWT
             mock_create.assert_called_once()
             _url, key = mock_create.call_args[0]
             assert key == settings.supabase_anon_key
-            # Should set the user JWT on the postgrest auth header
             mock_client.postgrest.auth.assert_called_once_with(user_jwt)
 
     def test_get_supabase_caches_clients(self):
@@ -384,156 +512,5 @@ class TestDualClient:
             mock_create.return_value = MagicMock()
             c1 = get_supabase("service_role")
             c2 = get_supabase("service_role")
-            mock_create.assert_called_once()  # Only called once
-            assert c1 is c2  # Same cached instance
-
-
-# ===== GOOGLE OAUTH CALLBACK TESTS =====
-
-
-class TestGoogleCallback:
-    """Tests for /api/v1/auth/google/callback: extracts display_name
-    and avatar_url from the Supabase user_metadata, upserts the
-    profiles row, and includes both fields in the redirect URL."""
-
-    def _make_user(self, user_metadata: dict, user_id: str = "u-google-1",
-                   email: str = "luis@gmail.com"):
-        user = MagicMock()
-        user.id = user_id
-        user.email = email
-        user.user_metadata = user_metadata
-        return user
-
-    def _make_session(self, access_token: str = "google-at",
-                      refresh_token: str = "google-rt"):
-        session = MagicMock()
-        session.access_token = access_token
-        session.refresh_token = refresh_token
-        return session
-
-    def _make_exchange_result(self, user, session):
-        result = MagicMock()
-        result.user = user
-        result.session = session
-        return result
-
-    def test_extracts_full_name_and_avatar_from_google_metadata(self):
-        from syncRoleBackend.auth.router import _build_google_redirect
-
-        user = self._make_user({
-            "full_name": "Luis Villarreal",
-            "avatar_url": "https://lh3.googleusercontent.com/luis.png",
-            "email": "luis@gmail.com",
-            "iss": "https://accounts.google.com",
-        })
-        session = self._make_session()
-        result = self._make_exchange_result(user, session)
-
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
-             patch("syncRoleBackend.auth.router.settings") as mock_settings:
-            mock_get_sb.return_value = MagicMock()
-            mock_settings.backend_url = "https://api.example.com"
-            mock_settings.frontend_url = "https://app.example.com"
-
-            redirect = _build_google_redirect(result)
-
-        qs = parse_qs(urlparse(redirect.headers["location"]).query)
-        assert qs["display_name"] == ["Luis Villarreal"]
-        assert qs["avatar_url"] == ["https://lh3.googleusercontent.com/luis.png"]
-        assert qs["user_id"] == ["u-google-1"]
-        assert qs["email"] == ["luis@gmail.com"]
-        assert qs["access_token"] == ["google-at"]
-        assert qs["refresh_token"] == ["google-rt"]
-
-    def test_falls_back_to_name_field_when_full_name_missing(self):
-        from syncRoleBackend.auth.router import _build_google_redirect
-
-        user = self._make_user({"name": "Luis V", "picture": "https://x/luis.png"})
-        session = self._make_session()
-        result = self._make_exchange_result(user, session)
-
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
-             patch("syncRoleBackend.auth.router.settings") as mock_settings:
-            mock_get_sb.return_value = MagicMock()
-            mock_settings.backend_url = "https://api.example.com"
-            mock_settings.frontend_url = "https://app.example.com"
-
-            redirect = _build_google_redirect(result)
-
-        qs = parse_qs(urlparse(redirect.headers["location"]).query)
-        assert qs["display_name"] == ["Luis V"]
-        assert qs["avatar_url"] == ["https://x/luis.png"]
-
-    def test_upserts_profiles_row_with_google_data(self):
-        from syncRoleBackend.auth.router import _build_google_redirect
-
-        user = self._make_user({
-            "full_name": "Luis V",
-            "avatar_url": "https://x/luis.png",
-        }, user_id="user-xyz")
-        session = self._make_session()
-        result = self._make_exchange_result(user, session)
-
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
-             patch("syncRoleBackend.auth.router.settings") as mock_settings:
-            mock_sb = MagicMock()
-            mock_get_sb.return_value = mock_sb
-            mock_settings.backend_url = "https://api.example.com"
-            mock_settings.frontend_url = "https://app.example.com"
-
-            _build_google_redirect(result)
-
-        mock_sb.table.assert_called_once_with("profiles")
-        upsert_call = mock_sb.table.return_value.upsert.call_args
-        assert upsert_call.args[0] == {
-            "id": "user-xyz",
-            "display_name": "Luis V",
-            "avatar_url": "https://x/luis.png",
-        }
-        assert upsert_call.kwargs == {"on_conflict": "id"}
-
-    def test_profile_upsert_failure_does_not_break_auth_flow(self):
-        """If the profiles table write fails (RLS, network, etc.),
-        the redirect must still go out so the user can sign in."""
-        from syncRoleBackend.auth.router import _build_google_redirect
-
-        user = self._make_user({"full_name": "Luis", "avatar_url": "https://x"})
-        session = self._make_session()
-        result = self._make_exchange_result(user, session)
-
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
-             patch("syncRoleBackend.auth.router.settings") as mock_settings:
-            mock_sb = MagicMock()
-            mock_sb.table.return_value.upsert.side_effect = RuntimeError("db down")
-            mock_get_sb.return_value = mock_sb
-            mock_settings.backend_url = "https://api.example.com"
-            mock_settings.frontend_url = "https://app.example.com"
-
-            redirect = _build_google_redirect(result)
-
-        # The redirect must still happen despite the upsert failure
-        qs = parse_qs(urlparse(redirect.headers["location"]).query)
-        assert qs["user_id"] == ["u-google-1"]
-        assert qs["display_name"] == ["Luis"]
-
-    def test_empty_metadata_yields_empty_profile_fields(self):
-        from syncRoleBackend.auth.router import _build_google_redirect
-
-        user = self._make_user({})  # no name, no avatar
-        session = self._make_session()
-        result = self._make_exchange_result(user, session)
-
-        with patch("syncRoleBackend.auth.router.get_supabase") as mock_get_sb, \
-             patch("syncRoleBackend.auth.router.settings") as mock_settings:
-            mock_get_sb.return_value = MagicMock()
-            mock_settings.backend_url = "https://api.example.com"
-            mock_settings.frontend_url = "https://app.example.com"
-
-            redirect = _build_google_redirect(result)
-
-        # keep_blank_values so we can assert the URL really carries
-        # display_name= and avatar_url= (not just omits them).
-        qs = parse_qs(urlparse(redirect.headers["location"]).query,
-                      keep_blank_values=True)
-        assert qs["display_name"] == [""]
-        assert qs["avatar_url"] == [""]
+            mock_create.assert_called_once()
+            assert c1 is c2

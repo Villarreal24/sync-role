@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { CircleAlert } from 'lucide-react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { getSupabaseBrowserClient } from '@/core/supabase/client'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
 import { GoogleOAuthButton } from './GoogleOAuthButton'
 import { useAuth } from '../hooks/use-auth'
 import { useAuthCopy } from '../copy'
-import { useAuthStore } from '../store/auth.store'
-import { Alert, AlertTitle, AlertDescription } from '@/shared/components/ui/alert'
 import { Card } from '@/shared/components/ui/card'
 import { Separator } from '@/shared/components/ui/separator'
 import { fontSize } from '@/shared/design-tokens'
@@ -17,36 +15,24 @@ export function AuthPage() {
   const copy = useAuthCopy()
   const [isLogin, setIsLogin] = useState(true)
   const { register, login } = useAuth()
-  const setAuth = useAuthStore((s) => s.setAuth)
-  const sessionExpiredReason = useAuthStore((s) => s.sessionExpiredReason)
-  const clearSessionExpired = useAuthStore((s) => s.clearSessionExpired)
   const navigate = useNavigate()
+  const search = useSearch({ from: '__root__' }) as Record<string, string>
 
+  // Handle Google OAuth callback: hydrate @supabase/ssr client with tokens
   useEffect(() => {
-    if (sessionExpiredReason) {
-      clearSessionExpired()
-    }
-  }, [sessionExpiredReason, clearSessionExpired])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const accessToken = params.get('access_token')
-    if (accessToken) {
-      const refreshToken = params.get('refresh_token') ?? ''
-      const userId = params.get('user_id') ?? ''
-      const email = params.get('email') ?? ''
-      const displayName = params.get('display_name') ?? ''
-      const avatarUrl = params.get('avatar_url') ?? ''
-      setAuth(accessToken, refreshToken, {
-        id: userId,
-        email,
-        displayName,
-        avatarUrl,
+    const { access_token, refresh_token } = search
+    if (access_token && refresh_token) {
+      const client = getSupabaseBrowserClient()
+      client.auth.setSession({ access_token, refresh_token }).then(({ data: { session } }) => {
+        if (session) {
+          navigate({ to: '/' })
+        }
       })
-      window.history.replaceState({}, '', '/auth')
+    } else if (search.user_id && search.email) {
+      // Fallback: navigate to / and let getSession determine state
       navigate({ to: '/' })
     }
-  }, [setAuth, navigate])
+  }, [search, navigate])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -57,14 +43,6 @@ export function AuthPage() {
             {isLogin ? copy.authPage.welcomeBack : copy.authPage.createYourAccount}
           </p>
         </div>
-
-        {sessionExpiredReason && (
-          <Alert variant="destructive" className="mb-6">
-            <CircleAlert className="h-5 w-5" />
-            <AlertTitle>{copy.sessionExpired.title}</AlertTitle>
-            <AlertDescription>{copy.sessionExpired.description}</AlertDescription>
-          </Alert>
-        )}
 
         <Card className="p-6 gap-0">
           {isLogin ? (

@@ -1,6 +1,7 @@
 import { Card } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/skeleton'
-import { useAuthStore } from '@/features/auth/store/auth.store'
+import { useAuth } from '@/features/auth/hooks/use-auth'
+import { useProfile } from '@/features/auth/api/profiles'
 import { useAuthCopy } from '@/features/auth/copy'
 import { useMounted } from '@/shared/hooks/use-mounted'
 import { UserAvatar } from '@/shared/components/sidebar/UserAvatar'
@@ -9,8 +10,11 @@ import { ProfileForm } from './ProfileForm'
 export function ProfileRoute() {
   const mounted = useMounted()
   const copy = useAuthCopy()
-  const email = useAuthStore((s) => s.user?.email ?? '')
-  const displayName = useAuthStore((s) => s.user?.displayName ?? '')
+  const { user } = useAuth()
+  const { data: profile } = useProfile()
+
+  const email = user?.email ?? ''
+  const displayName = profile?.displayName ?? ''
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
